@@ -66,7 +66,7 @@ func (c *CollectorHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if parsedURL.Type == `counter` {
 		value, err := c.parseCounter(parsedURL.Value)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotFound)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		c.storage.UpdateCounterMetric(parsedURL.Name, value)
@@ -74,7 +74,7 @@ func (c *CollectorHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else if parsedURL.Type == `gauge` {
 		value, err := c.parseGauge(parsedURL.Value)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusNotFound)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
 		}
 		c.storage.UpdateGaugeMetric(parsedURL.Name, value)
@@ -149,6 +149,6 @@ func (c *CollectorHandler) parseGauge(param string) (float64, error) {
 		fmt.Println(errParseError.Error(), `on`, param)
 		return 0, errParseError
 	}
-
+	
 	return n, nil
 }
