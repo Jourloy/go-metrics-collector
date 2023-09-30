@@ -10,7 +10,7 @@ import (
 	"github.com/Jourloy/go-metrics-collector/cmd/server/storage"
 )
 
-type ParsedUrl struct {
+type ParsedURL struct {
 	Type  string
 	Name  string
 	Value string
@@ -41,48 +41,51 @@ func (c *CollectorHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Parse url
-	parsedUrl, err := c.parseUrl(r.URL.String())
+	// Parse URL
+	parsedURL, err := c.parseURL(r.URL.String())
 	if err != nil {
 		if err.Error() == `not found prefix` {
 			http.Error(w, err.Error(), http.StatusNotFound)
 		} else if err.Error() == `length of url params is not 3` {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, err.Error(), http.StatusNotFound)
 		} else if err.Error() == `empty url params` {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, err.Error(), http.StatusNotFound)
 		} else {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			http.Error(w, err.Error(), http.StatusBadRequest)
 		}
 		return
 	}
 
-	if parsedUrl.Type != `counter` && parsedUrl.Type != `gauge` {
+	// Check type
+	if parsedURL.Type != `counter` && parsedURL.Type != `gauge` {
 		http.Error(w, errTypeError.Error(), http.StatusBadRequest)
 		return
 	}
 
-	if parsedUrl.Type == `counter` {
-		value, err := c.parseCounter(parsedUrl.Value)
+	// Update
+	if parsedURL.Type == `counter` {
+		value, err := c.parseCounter(parsedURL.Value)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
-		c.storage.UpdateCounterMetric(parsedUrl.Name, value)
+		c.storage.UpdateCounterMetric(parsedURL.Name, value)
 
-	} else if parsedUrl.Type == `gauge` {
-		value, err := c.parseGauge(parsedUrl.Value)
+	} else if parsedURL.Type == `gauge` {
+		value, err := c.parseGauge(parsedURL.Value)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusBadRequest)
+			http.Error(w, err.Error(), http.StatusNotFound)
 			return
 		}
-		c.storage.UpdateGaugeMetric(parsedUrl.Name, value)
+		c.storage.UpdateGaugeMetric(parsedURL.Name, value)
 	}
 
+	// Response
 	w.Header().Set(`Content-Type`, `plain/text`)
 	w.WriteHeader(http.StatusOK)
 }
 
-func (c *CollectorHandler) parseUrl(urlString string) (*ParsedUrl, error) {
+func (c *CollectorHandler) parseURL(urlString string) (*ParsedURL, error) {
 	// Prepare for .env
 	endpoint := `/update/`
 
@@ -109,7 +112,7 @@ func (c *CollectorHandler) parseUrl(urlString string) (*ParsedUrl, error) {
 		u[i] = strings.Replace(u[i], `%20`, ``, -1)
 	}
 
-	return &ParsedUrl{
+	return &ParsedURL{
 		Type:  u[0],
 		Name:  u[1],
 		Value: u[2],
@@ -117,27 +120,35 @@ func (c *CollectorHandler) parseUrl(urlString string) (*ParsedUrl, error) {
 }
 
 func (c *CollectorHandler) parseCounter(param string) (int64, error) {
-	if param == "" {
+	// If param is empty
+	if param == `` {
 		fmt.Println(errParseError.Error(), `on`, param)
 		return 0, errParseError
 	}
+
+	// Parse
 	n, err := strconv.ParseInt(param, 10, 64)
 	if err != nil {
 		fmt.Println(errParseError.Error(), `on`, param)
 		return 0, errParseError
 	}
+
 	return n, nil
 }
 
 func (c *CollectorHandler) parseGauge(param string) (float64, error) {
-	if param == "" {
+	// If param is empty
+	if param == `` {
 		fmt.Println(errParseError.Error(), `on`, param)
 		return 0, errParseError
 	}
+
+	// Parse
 	n, err := strconv.ParseFloat(param, 64)
 	if err != nil {
 		fmt.Println(errParseError.Error(), `on`, param)
 		return 0, errParseError
 	}
+
 	return n, nil
 }
