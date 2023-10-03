@@ -6,6 +6,12 @@ import (
 )
 
 func live(w http.ResponseWriter, r *http.Request) {
+	// Check method
+	if r.Method != http.MethodGet {
+		http.Error(w, `method not allowed`, http.StatusMethodNotAllowed)
+		return
+	}
+
 	w.Write([]byte("Live"))
 }
 
