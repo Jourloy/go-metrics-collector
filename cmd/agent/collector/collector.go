@@ -108,7 +108,9 @@ func (c *Collector) sendMetrics() {
 func (c *Collector) sendPOST(metricType string, name string, value string) {
 	host := `http://localhost:8080/update`
 
-	if _, err := http.Post(host+`/`+metricType+`/`+name+`/`+value, `text/plain`, nil); err != nil {
+	res, err := http.Post(host+`/`+metricType+`/`+name+`/`+value, `text/plain`, nil)
+	if err != nil {
 		fmt.Println(err)
 	}
+	res.Body.Close()
 }

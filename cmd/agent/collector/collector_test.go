@@ -40,7 +40,7 @@ func TestCollector_CollectMetrics(t *testing.T) {
 			c := CreateCollector()
 			go c.StartTickers()
 
-			time.Sleep(time.Duration(2) * time.Second)
+			time.Sleep(time.Duration(3) * time.Second)
 
 			c.StopTickers()
 
