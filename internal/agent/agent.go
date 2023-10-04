@@ -8,14 +8,11 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func init() {
-	// loads values from .env into the system
-	if err := godotenv.Load(`.env.agent`); err != nil {
+func Start() {
+	if err := godotenv.Load(); err != nil {
 		fmt.Println(`.env.agent not found`)
 	}
-}
 
-func Start() {
 	flag.Parse()
 
 	agent := collector.CreateCollector()

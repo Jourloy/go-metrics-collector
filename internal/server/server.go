@@ -12,16 +12,12 @@ import (
 	"github.com/joho/godotenv"
 )
 
-func init() {
-	// loads values from .env into the system
-	if err := godotenv.Load(`.env.server`); err != nil {
-		fmt.Println(`.env.server not found`)
-	}
-}
-
 var host string
 
 func Start() {
+	if err := godotenv.Load(); err != nil {
+		fmt.Println(`.env.server not found`)
+	}
 
 	hostENV, exist := os.LookupEnv(`ADDRESS`)
 	if !exist {
