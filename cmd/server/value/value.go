@@ -47,7 +47,7 @@ func (v *ValueSevice) ServeHTTP(ctx *gin.Context) {
 			ctx.String(http.StatusNotFound, errNotFound.Error())
 			return
 		}
-		ctx.String(http.StatusOK, `%f`, value)
+		ctx.String(http.StatusOK, `%g`, value)
 	} else {
 		ctx.String(http.StatusNotFound, errType.Error())
 	}
