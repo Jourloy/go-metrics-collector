@@ -6,11 +6,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/Jourloy/go-metrics-collector/cmd/server/storage/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRegisterLiveHandler(t *testing.T) {
+func TestRegisterAppHandler(t *testing.T) {
 	type args struct {
 		path   string
 		method string
@@ -43,7 +44,9 @@ func TestRegisterLiveHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := gin.Default()
-			RegisterLiveHandler(r)
+			s := repository.CreateRepository()
+
+			RegisterAppHandler(r, s)
 
 			req := httptest.NewRequest(tt.args.method, tt.args.path, nil)
 			rec := httptest.NewRecorder()

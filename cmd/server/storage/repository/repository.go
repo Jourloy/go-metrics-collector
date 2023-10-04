@@ -17,8 +17,16 @@ func CreateRepository() storage.Storage {
 }
 
 // Return values
-func (r *MemStorage) ReturnValues() (map[string]float64, map[string]int64) {
+func (r *MemStorage) GetValues() (map[string]float64, map[string]int64) {
 	return r.gauge, r.counter
+}
+
+func (r *MemStorage) GetCounterValue(name string) int64 {
+	return r.counter[name]
+}
+
+func (r *MemStorage) GetGaugeValue(name string) float64 {
+	return r.gauge[name]
 }
 
 // Update gauge metric

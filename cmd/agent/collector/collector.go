@@ -111,6 +111,7 @@ func (c *Collector) sendPOST(metricType string, name string, value string) {
 	res, err := http.Post(host+`/`+metricType+`/`+name+`/`+value, `text/plain`, nil)
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 	res.Body.Close()
 }

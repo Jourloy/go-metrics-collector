@@ -1,0 +1,12 @@
+<!doctype html>
+<html lang="ru">
+
+<body>
+	<ul>
+	{{ range $key, $value := .merged }}
+		<li><b>{{ $key }}</b>: {{ $value }}</li>
+	{{ end }}
+	</ul>
+</body>
+
+</html>

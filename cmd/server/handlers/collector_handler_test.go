@@ -73,7 +73,7 @@ func TestCollectorHandler_ServeHTTP(t *testing.T) {
 			r := gin.Default()
 			s := repository.CreateRepository()
 
-			RegisterCollectorHandler(r, &s)
+			RegisterCollectorHandler(r, s)
 
 			req := httptest.NewRequest(tt.args.method, tt.args.path, nil)
 			rec := httptest.NewRecorder()

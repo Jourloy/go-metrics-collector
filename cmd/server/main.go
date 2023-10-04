@@ -18,10 +18,11 @@ func main() {
 	// Initiate handlers
 	r := gin.Default()
 
-	handlers.RegisterLiveHandler(r)
-	handlers.RegisterCollectorHandler(r, &s)
+	r.LoadHTMLGlob(`templates/*`)
 
-	fmt.Println(`Server started on port`, port)
+	handlers.RegisterAppHandler(r, s)
+	handlers.RegisterCollectorHandler(r, s)
+	handlers.RegisterValueHandler(r, s)
 
 	if err := r.Run(fmt.Sprintf(`:%s`, port)); err != nil {
 		if err == http.ErrServerClosed {
