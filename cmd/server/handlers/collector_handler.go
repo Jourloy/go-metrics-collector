@@ -2,20 +2,19 @@ package handlers
 
 import (
 	"fmt"
-	"net/http"
 
 	"github.com/Jourloy/go-metrics-collector/cmd/server/collector"
-	"github.com/Jourloy/go-metrics-collector/cmd/server/storage/repository"
+	"github.com/Jourloy/go-metrics-collector/cmd/server/storage"
+	"github.com/gin-gonic/gin"
 )
 
-func RegisterCollectorHandler(mux *http.ServeMux) {
+func RegisterCollectorHandler(r *gin.Engine, s *storage.Storage) {
 	// Prepare for .env
-	metricEndpoint := `/update/`
+	metricEndpoint := `/update`
 
-	// Initiate database
-	s := repository.CreateRepository()
-	fmt.Println(`Repository handler registered on`, metricEndpoint)
+	collectorHandler := collector.CollectMetric(*s)
 
-	mux.Handle(metricEndpoint, collector.CollectMetric(s))
-	fmt.Println(`Collector handler registered on`, metricEndpoint)
+	r.POST(metricEndpoint+`/:type`+`/:name`+`/:value`, collectorHandler.ServeHTTP)
+
+	fmt.Println(`Mapped`, metricEndpoint)
 }

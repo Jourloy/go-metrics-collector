@@ -6,10 +6,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
 
-func Test_live(t *testing.T) {
+func TestRegisterLiveHandler(t *testing.T) {
 	type args struct {
 		path   string
 		method string
@@ -26,8 +27,8 @@ func Test_live(t *testing.T) {
 				path:   `/live`,
 				method: http.MethodPost,
 			},
-			wantCode: 405,
-			wantBody: `method not allowed`,
+			wantCode: 404,
+			wantBody: `404 page not found`,
 		},
 		{
 			name: `Positive #1`,
@@ -41,10 +42,13 @@ func Test_live(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			r := gin.Default()
+			RegisterLiveHandler(r)
+
 			req := httptest.NewRequest(tt.args.method, tt.args.path, nil)
 			rec := httptest.NewRecorder()
 
-			live(rec, req)
+			r.ServeHTTP(rec, req)
 
 			assert.Equal(t, tt.wantCode, rec.Code)
 			assert.Equal(t, tt.wantBody, strings.TrimSuffix(rec.Body.String(), "\n"))

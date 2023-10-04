@@ -3,19 +3,16 @@ package handlers
 import (
 	"fmt"
 	"net/http"
+
+	"github.com/gin-gonic/gin"
 )
 
-func live(w http.ResponseWriter, r *http.Request) {
-	// Check method
-	if r.Method != http.MethodGet {
-		http.Error(w, `method not allowed`, http.StatusMethodNotAllowed)
-		return
-	}
-
-	w.Write([]byte("Live"))
+func live(c *gin.Context) {
+	c.String(http.StatusOK, "Live")
 }
 
-func RegisterLiveHandler(mux *http.ServeMux) {
-	mux.HandleFunc("/live", live)
-	fmt.Println(`Live handler registered on /live`)
+func RegisterLiveHandler(r *gin.Engine) {
+	r.GET("/live", live)
+
+	fmt.Println(`Mapped /live`)
 }

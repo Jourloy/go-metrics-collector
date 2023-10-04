@@ -1,93 +1,217 @@
 package collector
 
 import (
-	"net/http"
-	"net/http/httptest"
-	"strings"
 	"testing"
 
-	"github.com/Jourloy/go-metrics-collector/cmd/server/storage/repository"
+	"github.com/Jourloy/go-metrics-collector/cmd/server/storage"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCollectorHandler_ServeHTTP(t *testing.T) {
+func TestCollectorHandler_parseURL(t *testing.T) {
+	type fields struct {
+		storage storage.Storage
+	}
 	type args struct {
-		path   string
-		method string
+		path string
+	}
+	type ParsedURL struct {
+		Type  string
+		Name  string
+		Value string
 	}
 	tests := []struct {
-		name     string
-		args     args
-		wantCode int
-		wantBody string
+		name           string
+		fields         fields
+		args           args
+		want           *ParsedURL
+		wantErr        bool
+		wantErrMessage string
 	}{
 		{
-			name: `Negative #1 (Without prefix)`,
+			name: `Negative #1 (Without params)`,
 			args: args{
-				path:   `/update`,
-				method: http.MethodPost,
+				path: `/update/`,
 			},
-			wantCode: 404,
-			wantBody: `not found prefix`,
+			want:           nil,
+			wantErr:        true,
+			wantErrMessage: `404 page not found`,
 		},
 		{
-			name: `Negative #2 (Without params)`,
+			name: `Negative #2 (Not enough params)`,
 			args: args{
-				path:   `/update/`,
-				method: http.MethodPost,
+				path: `/update/counter/check`,
 			},
-			wantCode: 404,
-			wantBody: `length of url params is not 3`,
+			want:           nil,
+			wantErr:        true,
+			wantErrMessage: `404 page not found`,
 		},
 		{
-			name: `Negative #3 (Invalid type)`,
+			name: `Positive #1`,
 			args: args{
-				path:   `/update/oops/name/1`,
-				method: http.MethodPost,
+				path: `/update/counter/check/1`,
 			},
-			wantCode: 400,
-			wantBody: `type not found`,
-		},
-		{
-			name: `Negative #4 (Counter fail)`,
-			args: args{
-				path:   `/update/counter/name/1.1`,
-				method: http.MethodPost,
+			want: &ParsedURL{
+				Type:  `counter`,
+				Name:  `check`,
+				Value: `1`,
 			},
-			wantCode: 400,
-			wantBody: `parse error`,
-		},
-		{
-			name: `Positive #1 (Counter)`,
-			args: args{
-				path:   `/update/counter/name/1`,
-				method: http.MethodPost,
-			},
-			wantCode: 200,
-			wantBody: ``,
-		},
-		{
-			name: `Positive #2 (Gauge)`,
-			args: args{
-				path:   `/update/gauge/name/1.1`,
-				method: http.MethodPost,
-			},
-			wantCode: 200,
-			wantBody: ``,
+			wantErr:        false,
+			wantErrMessage: ``,
 		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			s := repository.CreateRepository()
-			c := &CollectorHandler{storage: s}
+			c := &CollectorHandler{
+				storage: tt.fields.storage,
+			}
+			got, err := c.parseURL(tt.args.path)
 
-			req := httptest.NewRequest(tt.args.method, tt.args.path, nil)
-			rec := httptest.NewRecorder()
+			if err != nil {
+				assert.True(t, tt.wantErr)
+				assert.Equal(t, tt.wantErrMessage, err.Error())
+			}
 
-			c.ServeHTTP(rec, req)
+			if err == nil {
+				assert.False(t, tt.wantErr)
+				assert.Equal(t, tt.want.Type, got.Type)
+				assert.Equal(t, tt.want.Name, got.Name)
+				assert.Equal(t, tt.want.Value, got.Value)
+			}
+		})
+	}
+}
 
-			assert.Equal(t, tt.wantCode, rec.Code)
-			assert.Equal(t, tt.wantBody, strings.TrimSuffix(rec.Body.String(), "\n"))
+func TestCollectorHandler_parseCounter(t *testing.T) {
+	type fields struct {
+		storage storage.Storage
+	}
+	type args struct {
+		param string
+	}
+	tests := []struct {
+		name           string
+		fields         fields
+		args           args
+		want           int64
+		wantErr        bool
+		wantErrMessage string
+	}{
+		{
+			name: `Negative #1 (Without params)`,
+			args: args{
+				param: ``,
+			},
+			want:           0,
+			wantErr:        true,
+			wantErrMessage: `parse error`,
+		},
+		{
+			name: `Negative #2 (Not int)`,
+			args: args{
+				param: `1.23`,
+			},
+			want:           0,
+			wantErr:        true,
+			wantErrMessage: `parse error`,
+		},
+		{
+			name: `Positive #1`,
+			args: args{
+				param: `11`,
+			},
+			want:           11,
+			wantErr:        false,
+			wantErrMessage: ``,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &CollectorHandler{
+				storage: tt.fields.storage,
+			}
+			got, err := c.parseCounter(tt.args.param)
+
+			if err != nil {
+				assert.True(t, tt.wantErr)
+				assert.Equal(t, tt.wantErrMessage, err.Error())
+			}
+
+			if err == nil {
+				assert.False(t, tt.wantErr)
+				assert.Equal(t, tt.want, got)
+			}
+		})
+	}
+}
+
+func TestCollectorHandler_parseGauge(t *testing.T) {
+	type fields struct {
+		storage storage.Storage
+	}
+	type args struct {
+		param string
+	}
+	tests := []struct {
+		name           string
+		fields         fields
+		args           args
+		want           float64
+		wantErr        bool
+		wantErrMessage string
+	}{
+		{
+			name: `Negative #1 (Without params)`,
+			args: args{
+				param: ``,
+			},
+			want:           0,
+			wantErr:        true,
+			wantErrMessage: `parse error`,
+		},
+		{
+			name: `Negative #2 (Invalid params)`,
+			args: args{
+				param: `12.,,12`,
+			},
+			want:           0,
+			wantErr:        true,
+			wantErrMessage: `parse error`,
+		},
+		{
+			name: `Positive #1`,
+			args: args{
+				param: `11`,
+			},
+			want:           11,
+			wantErr:        false,
+			wantErrMessage: ``,
+		},
+		{
+			name: `Positive #2`,
+			args: args{
+				param: `1.1`,
+			},
+			want:           1.1,
+			wantErr:        false,
+			wantErrMessage: ``,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			c := &CollectorHandler{
+				storage: tt.fields.storage,
+			}
+			got, err := c.parseGauge(tt.args.param)
+
+			if err != nil {
+				assert.True(t, tt.wantErr)
+				assert.Equal(t, tt.wantErrMessage, err.Error())
+			}
+
+			if err == nil {
+				assert.False(t, tt.wantErr)
+				assert.Equal(t, tt.want, got)
+			}
 		})
 	}
 }

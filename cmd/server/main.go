@@ -5,25 +5,25 @@ import (
 	"net/http"
 
 	"github.com/Jourloy/go-metrics-collector/cmd/server/handlers"
+	"github.com/Jourloy/go-metrics-collector/cmd/server/storage/repository"
+	"github.com/gin-gonic/gin"
 )
-
-func liveHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Live"))
-}
 
 func main() {
 	// Prepare for .env
 	port := `8080`
 
+	s := repository.CreateRepository()
+
 	// Initiate handlers
-	mux := http.NewServeMux()
-	handlers.RegisterLiveHandler(mux)
-	handlers.RegisterCollectorHandler(mux)
+	r := gin.Default()
+
+	handlers.RegisterLiveHandler(r)
+	handlers.RegisterCollectorHandler(r, &s)
 
 	fmt.Println(`Server started on port`, port)
 
-	// Starting server
-	if err := http.ListenAndServe(fmt.Sprintf(`:%s`, port), mux); err != nil {
+	if err := r.Run(fmt.Sprintf(`:%s`, port)); err != nil {
 		if err == http.ErrServerClosed {
 			fmt.Println(`Server closed`)
 		} else {
