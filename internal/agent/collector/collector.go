@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	Host           = flag.String("host", `localhost:8080`, "Host of the backend")
+	Host           = flag.String("a", `localhost:8080`, "Host of the backend")
 	ReportInterval = flag.Int("r", 10, "Report Interval")
 	PollInterval   = flag.Int("p", 2, "Poll Interval")
 )

@@ -11,7 +11,7 @@ import (
 )
 
 func Start() {
-	host := flag.String("host", `localhost:8080`, "Host of the server")
+	host := flag.String("a", `localhost:8080`, "Host of the server")
 
 	flag.Parse()
 
