@@ -12,10 +12,6 @@ func live(c *gin.Context) {
 	c.String(http.StatusOK, "Live")
 }
 
-func getAllValues() {
-
-}
-
 func RegisterAppHandler(r *gin.Engine, s storage.Storage) {
 	appHandler := app.GetAppSevice(s)
 
