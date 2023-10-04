@@ -35,10 +35,18 @@ func (v *ValueSevice) ServeHTTP(ctx *gin.Context) {
 	}
 
 	if metricType == `counter` {
-		value := v.storage.GetCounterValue(metricName)
+		value, ok := v.storage.GetCounterValue(metricName)
+		if !ok {
+			ctx.String(http.StatusNotFound, errNotFound.Error())
+			return
+		}
 		ctx.String(http.StatusOK, `%d`, value)
 	} else if metricType == `gauge` {
-		value := v.storage.GetGaugeValue(metricName)
+		value, ok := v.storage.GetGaugeValue(metricName)
+		if !ok {
+			ctx.String(http.StatusNotFound, errNotFound.Error())
+			return
+		}
 		ctx.String(http.StatusOK, `%f`, value)
 	} else {
 		ctx.String(http.StatusNotFound, errType.Error())

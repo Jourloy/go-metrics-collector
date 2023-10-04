@@ -21,12 +21,14 @@ func (r *MemStorage) GetValues() (map[string]float64, map[string]int64) {
 	return r.gauge, r.counter
 }
 
-func (r *MemStorage) GetCounterValue(name string) int64 {
-	return r.counter[name]
+func (r *MemStorage) GetCounterValue(name string) (int64, bool) {
+	value, ok := r.counter[name]
+	return value, ok
 }
 
-func (r *MemStorage) GetGaugeValue(name string) float64 {
-	return r.gauge[name]
+func (r *MemStorage) GetGaugeValue(name string) (float64, bool) {
+	value, ok := r.gauge[name]
+	return value, ok
 }
 
 // Update gauge metric
