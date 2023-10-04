@@ -12,18 +12,13 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var host string
+var (
+	Host = flag.String("a", `localhost:8080`, "Host of the server")
+)
 
 func Start() {
 	if err := godotenv.Load(); err != nil {
 		fmt.Println(`.env.server not found`)
-	}
-
-	hostENV, exist := os.LookupEnv(`ADDRESS`)
-	if !exist {
-		host = *flag.String("a", `localhost:8080`, "Host of the server")
-	} else {
-		host = hostENV
 	}
 
 	flag.Parse()
@@ -39,11 +34,23 @@ func Start() {
 	handlers.RegisterCollectorHandler(r, s)
 	handlers.RegisterValueHandler(r, s)
 
-	if err := r.Run(host); err != nil {
-		if err == http.ErrServerClosed {
-			fmt.Println(`Server closed`)
-		} else {
-			panic(err)
+	hostENV, exist := os.LookupEnv(`ADDRESS`)
+	if !exist {
+		if err := r.Run(*Host); err != nil {
+			if err == http.ErrServerClosed {
+				fmt.Println(`Server closed`)
+			} else {
+				panic(err)
+			}
+		}
+	} else {
+		if err := r.Run(hostENV); err != nil {
+			if err == http.ErrServerClosed {
+				fmt.Println(`Server closed`)
+			} else {
+				panic(err)
+			}
 		}
 	}
+
 }
