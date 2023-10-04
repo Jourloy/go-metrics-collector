@@ -1,8 +1,7 @@
 package main
 
-import "github.com/Jourloy/go-metrics-collector/cmd/agent/collector"
+import "github.com/Jourloy/go-metrics-collector/internal/agent"
 
 func main() {
-	agent := collector.CreateCollector()
-	agent.StartTickers()
+	agent.Start()
 }

@@ -3,7 +3,7 @@ package collector
 import (
 	"testing"
 
-	"github.com/Jourloy/go-metrics-collector/cmd/server/storage"
+	"github.com/Jourloy/go-metrics-collector/internal/server/storage"
 	"github.com/stretchr/testify/assert"
 )
 

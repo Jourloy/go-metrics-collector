@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Jourloy/go-metrics-collector/cmd/server/storage/repository"
+	"github.com/Jourloy/go-metrics-collector/internal/server/storage/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )

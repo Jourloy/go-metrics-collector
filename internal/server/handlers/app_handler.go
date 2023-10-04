@@ -3,8 +3,8 @@ package handlers
 import (
 	"net/http"
 
-	"github.com/Jourloy/go-metrics-collector/cmd/server/app"
-	"github.com/Jourloy/go-metrics-collector/cmd/server/storage"
+	"github.com/Jourloy/go-metrics-collector/internal/server/app"
+	"github.com/Jourloy/go-metrics-collector/internal/server/storage"
 	"github.com/gin-gonic/gin"
 )
 
