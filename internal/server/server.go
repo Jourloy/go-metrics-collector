@@ -1,6 +1,7 @@
 package server
 
 import (
+	"flag"
 	"fmt"
 	"net/http"
 
@@ -10,8 +11,9 @@ import (
 )
 
 func Start() {
-	// Prepare for .env
-	port := `8080`
+	host := flag.String("host", `localhost:8080`, "Host of the server")
+
+	flag.Parse()
 
 	s := repository.CreateRepository()
 
@@ -24,7 +26,7 @@ func Start() {
 	handlers.RegisterCollectorHandler(r, s)
 	handlers.RegisterValueHandler(r, s)
 
-	if err := r.Run(fmt.Sprintf(`:%s`, port)); err != nil {
+	if err := r.Run(*host); err != nil {
 		if err == http.ErrServerClosed {
 			fmt.Println(`Server closed`)
 		} else {
