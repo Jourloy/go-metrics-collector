@@ -1,11 +1,18 @@
 package collector
 
 import (
+	"flag"
 	"fmt"
 	"math/rand"
 	"net/http"
 	"runtime"
 	"time"
+)
+
+var (
+	Host           = flag.String("host", `localhost:8080`, "Host of the backend")
+	ReportInterval = flag.Int("r", 10, "Report Interval")
+	PollInterval   = flag.Int("p", 2, "Poll Interval")
 )
 
 type Collector struct {
@@ -27,13 +34,9 @@ func CreateCollector() *Collector {
 
 // StartTickers starts the tickers for collecting and sending metrics in the Collector struct.
 func (c *Collector) StartTickers() {
-	// Prepare for .env
-	collectInterval := 2
-	sendInterval := 10
-
 	// Start tickers
-	collectTicker := time.NewTicker(time.Duration(collectInterval) * time.Second)
-	sendTicker := time.NewTicker(time.Duration(sendInterval) * time.Second)
+	collectTicker := time.NewTicker(time.Duration(*PollInterval) * time.Second)
+	sendTicker := time.NewTicker(time.Duration(*ReportInterval) * time.Second)
 
 	fmt.Println(`Collector's tickers started`)
 
@@ -106,9 +109,8 @@ func (c *Collector) sendMetrics() {
 }
 
 func (c *Collector) sendPOST(metricType string, name string, value string) {
-	host := `http://localhost:8080/update`
 
-	res, err := http.Post(host+`/`+metricType+`/`+name+`/`+value, `text/plain`, nil)
+	res, err := http.Post(`http://`+*Host+`/update/`+metricType+`/`+name+`/`+value, `text/plain`, nil)
 	if err != nil {
 		fmt.Println(err)
 		return
