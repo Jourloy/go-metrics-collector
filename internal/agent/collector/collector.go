@@ -5,14 +5,16 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"os"
 	"runtime"
+	"strconv"
 	"time"
 )
 
 var (
-	Host           = flag.String("a", `localhost:8080`, "Host of the backend")
-	ReportInterval = flag.Int("r", 10, "Report Interval")
-	PollInterval   = flag.Int("p", 2, "Poll Interval")
+	Host           string
+	ReportInterval int
+	PollInterval   int
 )
 
 type Collector struct {
@@ -20,6 +22,12 @@ type Collector struct {
 	counter map[string]int64
 	done    chan bool
 }
+
+var (
+	HostFlag   = flag.String("a", `localhost:8080`, "Host of the server")
+	PollFlag   = flag.Int("p", 2, "Poll Interval")
+	ReportFlag = flag.Int("r", 5, "Report Interval")
+)
 
 // CreateCollector creates a new instance of the Collector struct.
 //
@@ -34,9 +42,29 @@ func CreateCollector() *Collector {
 
 // StartTickers starts the tickers for collecting and sending metrics in the Collector struct.
 func (c *Collector) StartTickers() {
+
+	pollENV, pollExist := os.LookupEnv(`POLL_INTERVAL`)
+	if pollExist {
+		i, err := strconv.Atoi(pollENV)
+		if err == nil {
+			PollInterval = int(i)
+		}
+	} else {
+		PollInterval = *PollFlag
+	}
+	reportENV, reporeExist := os.LookupEnv(`REPORT_INTERVAL`)
+	if reporeExist {
+		i, err := strconv.Atoi(reportENV)
+		if err == nil {
+			ReportInterval = int(i)
+		}
+	} else {
+		ReportInterval = *ReportFlag
+	}
+
 	// Start tickers
-	collectTicker := time.NewTicker(time.Duration(*PollInterval) * time.Second)
-	sendTicker := time.NewTicker(time.Duration(*ReportInterval) * time.Second)
+	collectTicker := time.NewTicker(time.Duration(PollInterval) * time.Second)
+	sendTicker := time.NewTicker(time.Duration(ReportInterval) * time.Second)
 
 	fmt.Println(`Collector's tickers started`)
 
@@ -110,7 +138,14 @@ func (c *Collector) sendMetrics() {
 
 func (c *Collector) sendPOST(metricType string, name string, value string) {
 
-	res, err := http.Post(`http://`+*Host+`/update/`+metricType+`/`+name+`/`+value, `text/plain`, nil)
+	hostENV, exist := os.LookupEnv(`ADDRESS`)
+	if exist {
+		Host = hostENV
+	} else {
+		Host = *HostFlag
+	}
+
+	res, err := http.Post(`http://`+Host+`/update/`+metricType+`/`+name+`/`+value, `text/plain`, nil)
 	if err != nil {
 		fmt.Println(err)
 		return
