@@ -20,7 +20,7 @@ var (
 type Collector struct {
 	gauge   map[string]float64
 	counter map[string]int64
-	done    chan bool
+	done    chan struct{}
 }
 
 var (
@@ -36,7 +36,7 @@ func CreateCollector() *Collector {
 	return &Collector{
 		gauge:   make(map[string]float64),
 		counter: make(map[string]int64),
-		done:    make(chan bool),
+		done:    make(chan struct{}),
 	}
 }
 
