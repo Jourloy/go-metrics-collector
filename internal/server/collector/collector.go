@@ -3,6 +3,7 @@ package collector
 import (
 	"errors"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -73,11 +74,15 @@ func (c *CollectorHandler) ServeHTTP(ctx *gin.Context) {
 }
 
 func (c *CollectorHandler) parseURL(urlString string) (*ParsedURL, error) {
-	// Prepare for .env
+	decodedURL, err := url.PathUnescape(urlString)
+	if err != nil {
+		zap.L().Error(err.Error())
+	}
+
 	endpoint := `/update/`
 
 	// Remove prefix
-	after, found := strings.CutPrefix(urlString, endpoint)
+	after, found := strings.CutPrefix(decodedURL, endpoint)
 	if !found {
 		zap.L().Error(errNotFound.Error() + ` on ` + urlString)
 		return nil, errNotFound
@@ -90,13 +95,13 @@ func (c *CollectorHandler) parseURL(urlString string) (*ParsedURL, error) {
 		return nil, errNotFound
 	}
 
-	// Replace %20 with space and check for empty
+	// Check for empty and trim name
 	for i := 0; i < len(u); i++ {
 		if u[i] == "" {
 			zap.L().Error(errNotFound.Error() + ` on ` + urlString)
 			return nil, errNotFound
 		}
-		u[i] = strings.Replace(u[i], `%20`, ``, -1)
+		u[i] = strings.Trim(u[i], ` `)
 	}
 
 	return &ParsedURL{
