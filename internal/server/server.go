@@ -21,6 +21,10 @@ func Start() {
 		zap.L().Warn(`.env.server not found`)
 	}
 
+	if hostENV, exist := os.LookupEnv(`ADDRESS`); exist {
+		Host = &hostENV
+	}
+
 	flag.Parse()
 
 	s := repository.CreateRepository()
@@ -34,23 +38,11 @@ func Start() {
 	handlers.RegisterCollectorHandler(r, s)
 	handlers.RegisterValueHandler(r, s)
 
-	hostENV, exist := os.LookupEnv(`ADDRESS`)
-	if !exist {
-		if err := r.Run(*Host); err != nil {
-			if err == http.ErrServerClosed {
-				zap.L().Info(`Server closed`)
-			} else {
-				panic(err)
-			}
-		}
-	} else {
-		if err := r.Run(hostENV); err != nil {
-			if err == http.ErrServerClosed {
-				zap.L().Info(`Server closed`)
-			} else {
-				panic(err)
-			}
+	if err := r.Run(*Host); err != nil {
+		if err == http.ErrServerClosed {
+			zap.L().Info(`Server closed`)
+		} else {
+			panic(err)
 		}
 	}
-
 }
