@@ -13,5 +13,5 @@ $ go run ./cmd/agent
 ## Test
 
 ```bash
-$ go test ./cmd/agent/...
+$ go test ./internal/agent/...
 ```

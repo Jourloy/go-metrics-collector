@@ -15,5 +15,5 @@ $ go run ./cmd/server
 ## Test
 
 ```bash
-$ go test ./cmd/server/...
+$ go test ./internal/server/...
 ```
