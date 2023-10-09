@@ -17,7 +17,7 @@ var (
 )
 
 func Start() {
-	if err := godotenv.Load(); err != nil {
+	if err := godotenv.Load(`.env.server`); err != nil {
 		zap.L().Warn(`.env.server not found`)
 	}
 

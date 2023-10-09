@@ -44,24 +44,23 @@ func CreateCollector() *Collector {
 
 // StartTickers starts the tickers for collecting and sending metrics in the Collector struct.
 func (c *Collector) StartTickers() {
-	pollENV, pollExist := os.LookupEnv(`POLL_INTERVAL`)
-	if pollExist {
-		i, err := strconv.Atoi(pollENV)
-		if err == nil {
-			PollInterval = int(i)
+	PollInterval = *PollFlag
+	ReportInterval = *ReportFlag
+
+	if pollENV, exist := os.LookupEnv(`POLL_INTERVAL`); exist {
+		if i, err := strconv.Atoi(pollENV); err == nil {
+			PollInterval = i
 		}
-	} else {
-		PollInterval = *PollFlag
 	}
-	reportENV, reporeExist := os.LookupEnv(`REPORT_INTERVAL`)
-	if reporeExist {
-		i, err := strconv.Atoi(reportENV)
-		if err == nil {
-			ReportInterval = int(i)
+
+	if reportENV, exist := os.LookupEnv(`REPORT_INTERVAL`); exist {
+		if i, err := strconv.Atoi(reportENV); err == nil {
+			ReportInterval = i
 		}
-	} else {
-		ReportInterval = *ReportFlag
 	}
+
+	zap.L().Debug(fmt.Sprintf(`Poll Interval: %d`, PollInterval))
+	zap.L().Debug(fmt.Sprintf(`Report Interval: %d`, ReportInterval))
 
 	// Start tickers
 	collectTicker := time.NewTicker(time.Duration(PollInterval) * time.Second)
