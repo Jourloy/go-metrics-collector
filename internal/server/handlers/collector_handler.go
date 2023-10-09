@@ -7,7 +7,6 @@ import (
 )
 
 func RegisterCollectorHandler(r *gin.Engine, s storage.Storage) {
-	// Prepare for .env
 	metricEndpoint := `/update`
 
 	collectorHandler := collector.CollectMetric(s)
