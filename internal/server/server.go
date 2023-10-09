@@ -16,10 +16,13 @@ var (
 	Host = flag.String("a", `localhost:8080`, "Host of the server")
 )
 
-func Start() {
+func init() {
 	if err := godotenv.Load(`.env.server`); err != nil {
 		zap.L().Warn(`.env.server not found`)
 	}
+}
+
+func Start() {
 
 	if hostENV, exist := os.LookupEnv(`ADDRESS`); exist {
 		Host = &hostENV

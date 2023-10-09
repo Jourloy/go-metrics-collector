@@ -14,9 +14,9 @@ import (
 )
 
 var (
-	Host           string
-	ReportInterval int
-	PollInterval   int
+	ServerAddress  = flag.String("a", `localhost:8080`, "Host of the server")
+	ReportInterval = flag.Int("r", 5, "Report Interval")
+	PollInterval   = flag.Int("p", 2, "Poll Interval")
 )
 
 type Collector struct {
@@ -25,11 +25,23 @@ type Collector struct {
 	done    chan struct{}
 }
 
-var (
-	HostFlag   = flag.String("a", `localhost:8080`, "Host of the server")
-	PollFlag   = flag.Int("p", 2, "Poll Interval")
-	ReportFlag = flag.Int("r", 5, "Report Interval")
-)
+func init() {
+	if hostENV, exist := os.LookupEnv(`ADDRESS`); exist {
+		ServerAddress = &hostENV
+	}
+
+	if pollENV, exist := os.LookupEnv(`POLL_INTERVAL`); exist {
+		if i, err := strconv.Atoi(pollENV); err == nil {
+			PollInterval = &i
+		}
+	}
+
+	if reportENV, exist := os.LookupEnv(`REPORT_INTERVAL`); exist {
+		if i, err := strconv.Atoi(reportENV); err == nil {
+			ReportInterval = &i
+		}
+	}
+}
 
 // CreateCollector creates a new instance of the Collector struct.
 //
@@ -44,27 +56,12 @@ func CreateCollector() *Collector {
 
 // StartTickers starts the tickers for collecting and sending metrics in the Collector struct.
 func (c *Collector) StartTickers() {
-	PollInterval = *PollFlag
-	ReportInterval = *ReportFlag
-
-	if pollENV, exist := os.LookupEnv(`POLL_INTERVAL`); exist {
-		if i, err := strconv.Atoi(pollENV); err == nil {
-			PollInterval = i
-		}
-	}
-
-	if reportENV, exist := os.LookupEnv(`REPORT_INTERVAL`); exist {
-		if i, err := strconv.Atoi(reportENV); err == nil {
-			ReportInterval = i
-		}
-	}
-
 	zap.L().Debug(fmt.Sprintf(`Poll Interval: %d`, PollInterval))
 	zap.L().Debug(fmt.Sprintf(`Report Interval: %d`, ReportInterval))
 
 	// Start tickers
-	collectTicker := time.NewTicker(time.Duration(PollInterval) * time.Second)
-	sendTicker := time.NewTicker(time.Duration(ReportInterval) * time.Second)
+	collectTicker := time.NewTicker(time.Duration(*PollInterval) * time.Second)
+	sendTicker := time.NewTicker(time.Duration(*ReportInterval) * time.Second)
 
 	zap.L().Info(`Collector's tickers started`)
 
@@ -136,15 +133,7 @@ func (c *Collector) sendMetrics() {
 }
 
 func (c *Collector) sendPOST(metricType string, name string, value string) {
-
-	hostENV, exist := os.LookupEnv(`ADDRESS`)
-	if exist {
-		Host = hostENV
-	} else {
-		Host = *HostFlag
-	}
-
-	res, err := http.Post(`http://`+Host+`/update/`+metricType+`/`+name+`/`+value, `text/plain`, nil)
+	res, err := http.Post(`http://`+*ServerAddress+`/update/`+metricType+`/`+name+`/`+value, `text/plain`, nil)
 	if err != nil {
 		zap.L().Error(err.Error())
 		return
