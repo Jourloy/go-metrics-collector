@@ -18,10 +18,8 @@ func GetAppSevice(s storage.Storage) *AppSevice {
 }
 
 func (a *AppSevice) ServeHTTP(ctx *gin.Context) {
-
-	merged := make(map[string]any)
-
 	gauge, counter := a.storage.GetValues()
+	merged := make(map[string]any, len(gauge)+len(counter))
 
 	for name, value := range counter {
 		merged[name] = value
