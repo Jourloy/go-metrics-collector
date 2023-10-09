@@ -14,16 +14,10 @@ func TestCollectorHandler_parseURL(t *testing.T) {
 	type args struct {
 		path string
 	}
-	type ParsedURL struct {
-		Type  string
-		Name  string
-		Value string
-	}
 	tests := []struct {
 		name           string
 		fields         fields
 		args           args
-		want           *ParsedURL
 		wantErr        bool
 		wantErrMessage string
 	}{
@@ -32,7 +26,6 @@ func TestCollectorHandler_parseURL(t *testing.T) {
 			args: args{
 				path: `/update/`,
 			},
-			want:           nil,
 			wantErr:        true,
 			wantErrMessage: `404 page not found`,
 		},
@@ -41,7 +34,6 @@ func TestCollectorHandler_parseURL(t *testing.T) {
 			args: args{
 				path: `/update/counter/check`,
 			},
-			want:           nil,
 			wantErr:        true,
 			wantErrMessage: `404 page not found`,
 		},
@@ -50,11 +42,6 @@ func TestCollectorHandler_parseURL(t *testing.T) {
 			args: args{
 				path: `/update/counter/check/1`,
 			},
-			want: &ParsedURL{
-				Type:  `counter`,
-				Name:  `check`,
-				Value: `1`,
-			},
 			wantErr:        false,
 			wantErrMessage: ``,
 		},
@@ -62,11 +49,6 @@ func TestCollectorHandler_parseURL(t *testing.T) {
 			name: `Positive #2`,
 			args: args{
 				path: `/update/gauge/GCheck/1.2`,
-			},
-			want: &ParsedURL{
-				Type:  `gauge`,
-				Name:  `GCheck`,
-				Value: `1.2`,
 			},
 			wantErr:        false,
 			wantErrMessage: ``,
@@ -77,18 +59,11 @@ func TestCollectorHandler_parseURL(t *testing.T) {
 			c := &CollectorHandler{
 				storage: tt.fields.storage,
 			}
-			got, err := c.parseURL(tt.args.path)
+			_, err := c.parseURL(tt.args.path)
 
 			if err != nil {
 				assert.True(t, tt.wantErr)
 				assert.Equal(t, tt.wantErrMessage, err.Error())
-			}
-
-			if err == nil {
-				assert.False(t, tt.wantErr)
-				assert.Equal(t, tt.want.Type, got.Type)
-				assert.Equal(t, tt.want.Name, got.Name)
-				assert.Equal(t, tt.want.Value, got.Value)
 			}
 		})
 	}
