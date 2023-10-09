@@ -20,9 +20,10 @@ func TestCollector_StartTickers(t *testing.T) {
 			c := CreateCollector()
 
 			go c.StartTickers()
-			state := c.StopTickers()
+			c.StopTickers()
 
-			assert.True(t, state)
+			_, ok := <-c.done
+			assert.False(t, ok)
 		})
 	}
 }

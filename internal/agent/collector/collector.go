@@ -82,10 +82,9 @@ func (c *Collector) StartTickers() {
 // StopTickers stops the tickers of the Collector.
 //
 // It closes the 'done' channel and prints a message to the console.
-func (c *Collector) StopTickers() bool {
+func (c *Collector) StopTickers() {
 	zap.L().Info(`Collector's tickers stopped`)
 	close(c.done)
-	return true
 }
 
 func (c *Collector) collectMetric() {
