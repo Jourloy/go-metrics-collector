@@ -12,5 +12,5 @@ func RegisterCollectorHandler(r *gin.Engine, s storage.Storage) {
 
 	collectorHandler := collector.CollectMetric(s)
 
-	r.POST(metricEndpoint+`/:type`+`/:name`+`/:value`, collectorHandler.ServeHTTP)
+	r.POST(metricEndpoint+`/:type/:name/:value`, collectorHandler.ServeHTTP)
 }
