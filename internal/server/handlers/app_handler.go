@@ -8,10 +8,12 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Return an HTTP response with the string "Live".
 func live(c *gin.Context) {
 	c.String(http.StatusOK, "Live")
 }
 
+// Registers the app handler in the specified gin.Engine and uses the provided storage.
 func RegisterAppHandler(r *gin.Engine, s storage.Storage) {
 	appHandler := app.GetAppSevice(s)
 

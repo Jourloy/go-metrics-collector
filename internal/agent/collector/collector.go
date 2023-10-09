@@ -25,6 +25,8 @@ type Collector struct {
 	done    chan struct{}
 }
 
+// init initializes the ServerAddress, PollInterval, and ReportInterval
+// variables by checking for corresponding environment variables.
 func init() {
 	if hostENV, exist := os.LookupEnv(`ADDRESS`); exist {
 		ServerAddress = &hostENV
@@ -120,6 +122,8 @@ func (c *Collector) collectMetric() {
 	zap.L().Debug(`Metrics collected`)
 }
 
+// Sends the collected metrics to the backend.
+// After sending the metrics, it logs a debug message.
 func (c *Collector) sendMetrics() {
 	for name, value := range c.gauge {
 		c.sendPOST(`gauge`, name, fmt.Sprintf(`%f`, value))
@@ -132,6 +136,16 @@ func (c *Collector) sendMetrics() {
 	zap.L().Debug(`Metrics sended`)
 }
 
+// Sends a POST request to the metrics server to update a metric.
+//
+// metricType is the type of metric (e.g. "counter").
+// name is the name of the metric.
+// value is the value to update the metric to.
+//
+// It constructs a POST request to http://{ServerAddress}/update/{metricType}/{name}/{value}
+// to update the given metric on the metrics server.
+//
+// If there is an error making the POST request, it logs the error.
 func (c *Collector) sendPOST(metricType string, name string, value string) {
 	res, err := http.Post(`http://`+*ServerAddress+`/update/`+metricType+`/`+name+`/`+value, `text/plain`, nil)
 	if err != nil {

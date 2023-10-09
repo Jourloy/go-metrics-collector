@@ -11,12 +11,19 @@ type AppSevice struct {
 	storage storage.Storage
 }
 
+// Initializes and returns a new instance of AppSevice.
+//
+// It takes a `storage.Storage` parameter `s` and returns a pointer to `AppSevice`.
 func GetAppSevice(s storage.Storage) *AppSevice {
 	return &AppSevice{
 		storage: s,
 	}
 }
 
+// Handles the HTTP request.
+//
+// It retrieves the values from the storage and merges them into a single map.
+// The merged map is then passed to the HTML template for rendering.
 func (a *AppSevice) ServeHTTP(ctx *gin.Context) {
 	gauge, counter := a.storage.GetValues()
 	merged := make(map[string]any, len(gauge)+len(counter))

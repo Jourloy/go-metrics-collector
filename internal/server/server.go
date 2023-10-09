@@ -16,15 +16,17 @@ var (
 	Host = flag.String("a", `localhost:8080`, "Host of the server")
 )
 
+// Initialize the application.
 func init() {
 	if err := godotenv.Load(`.env.server`); err != nil {
 		zap.L().Warn(`.env.server not found`)
 	}
 }
 
+// Start initiates the application.
 func Start() {
-
-	if hostENV, exist := os.LookupEnv(`ADDRESS`); exist {
+	// Check if ADDRESS environment variable is set and assign it to Host
+	if hostENV, exist := os.LookupEnv("ADDRESS"); exist {
 		Host = &hostENV
 	}
 
@@ -35,15 +37,19 @@ func Start() {
 	// Initiate handlers
 	r := gin.Default()
 
-	r.LoadHTMLGlob(`templates/*`)
+	// Load HTML templates
+	r.LoadHTMLGlob("templates/*")
 
+	// Register application, collector, and value handlers
 	handlers.RegisterAppHandler(r, s)
 	handlers.RegisterCollectorHandler(r, s)
 	handlers.RegisterValueHandler(r, s)
 
+	// Run the server on the specified host
 	if err := r.Run(*Host); err != nil {
+		// Handle server closed error
 		if err == http.ErrServerClosed {
-			zap.L().Info(`Server closed`)
+			zap.L().Info("Server closed")
 		} else {
 			panic(err)
 		}

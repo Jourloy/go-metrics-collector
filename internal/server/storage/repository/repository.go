@@ -16,22 +16,24 @@ func CreateRepository() storage.Storage {
 	}
 }
 
-// Return values
+// Return the gauge and counter maps from the MemStorage struct.
 func (r *MemStorage) GetValues() (map[string]float64, map[string]int64) {
 	return r.gauge, r.counter
 }
 
+// Retrieve the value of a counter from the MemStorage.
 func (r *MemStorage) GetCounterValue(name string) (int64, bool) {
 	value, ok := r.counter[name]
 	return value, ok
 }
 
+// Return the value of a gauge by its name.
 func (r *MemStorage) GetGaugeValue(name string) (float64, bool) {
 	value, ok := r.gauge[name]
 	return value, ok
 }
 
-// Update gauge metric
+// Update the gauge metric with the given name and value in the MemStorage struct.
 func (r *MemStorage) UpdateGaugeMetric(name string, value float64) error {
 	r.gauge[name] = value
 
@@ -39,7 +41,7 @@ func (r *MemStorage) UpdateGaugeMetric(name string, value float64) error {
 	return nil
 }
 
-// Update counter metric
+// Update the counter metric in the MemStorage.
 func (r *MemStorage) UpdateCounterMetric(name string, value int64) error {
 	r.counter[name] += value
 

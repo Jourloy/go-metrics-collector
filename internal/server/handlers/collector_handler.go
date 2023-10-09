@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Register a collector handler in a gin.Engine instance.
 func RegisterCollectorHandler(r *gin.Engine, s storage.Storage) {
 	metricEndpoint := `/update`
 

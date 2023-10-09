@@ -6,6 +6,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+// Register a value handler for the specified Gin Engine.
 func RegisterValueHandler(r *gin.Engine, s storage.Storage) {
 	valueHandler := value.GetValueSevice(s)
 
