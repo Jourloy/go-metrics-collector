@@ -12,7 +12,7 @@ func TestCollector_StartTickers(t *testing.T) {
 		name string
 	}{
 		{
-			name: `Positive #1`,
+			name: `Positive`,
 		},
 	}
 	for _, tt := range tests {
@@ -33,7 +33,7 @@ func TestCollector_CollectMetrics(t *testing.T) {
 		name string
 	}{
 		{
-			name: `Positive #1`,
+			name: `Positive`,
 		},
 	}
 	for _, tt := range tests {
