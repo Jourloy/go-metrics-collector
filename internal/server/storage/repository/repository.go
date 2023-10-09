@@ -41,11 +41,7 @@ func (r *MemStorage) UpdateGaugeMetric(name string, value float64) error {
 
 // Update counter metric
 func (r *MemStorage) UpdateCounterMetric(name string, value int64) error {
-	if r.counter[name] == 0 {
-		r.counter[name] = value
-	} else {
-		r.counter[name] += value
-	}
+	r.counter[name] += value
 
 	// Prepare for difficult database
 	return nil
