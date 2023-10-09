@@ -2,13 +2,13 @@ package collector
 
 import (
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"github.com/Jourloy/go-metrics-collector/internal/server/storage"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 type ParsedURL struct {
@@ -79,21 +79,21 @@ func (c *CollectorHandler) parseURL(urlString string) (*ParsedURL, error) {
 	// Remove prefix
 	after, found := strings.CutPrefix(urlString, endpoint)
 	if !found {
-		fmt.Println(errNotFound.Error(), `on`, urlString)
+		zap.L().Error(errNotFound.Error() + ` on ` + urlString)
 		return nil, errNotFound
 	}
 
 	// Split url
 	u := strings.Split(after, `/`)
 	if len(u) != 3 {
-		fmt.Println(errNotFound.Error(), `on`, urlString)
+		zap.L().Error(errNotFound.Error() + ` on ` + urlString)
 		return nil, errNotFound
 	}
 
 	// Replace %20 with space and check for empty
 	for i := 0; i < len(u); i++ {
 		if u[i] == "" {
-			fmt.Println(errNotFound.Error(), `on`, urlString)
+			zap.L().Error(errNotFound.Error() + ` on ` + urlString)
 			return nil, errNotFound
 		}
 		u[i] = strings.Replace(u[i], `%20`, ``, -1)
@@ -109,14 +109,14 @@ func (c *CollectorHandler) parseURL(urlString string) (*ParsedURL, error) {
 func (c *CollectorHandler) parseCounter(param string) (int64, error) {
 	// If param is empty
 	if param == `` {
-		fmt.Println(errParse.Error(), `on`, param)
+		zap.L().Error(errParse.Error() + ` on ` + param)
 		return 0, errParse
 	}
 
 	// Parse
 	n, err := strconv.ParseInt(param, 10, 64)
 	if err != nil {
-		fmt.Println(errParse.Error(), `on`, param)
+		zap.L().Error(errParse.Error() + ` on ` + param)
 		return 0, errParse
 	}
 
@@ -126,14 +126,14 @@ func (c *CollectorHandler) parseCounter(param string) (int64, error) {
 func (c *CollectorHandler) parseGauge(param string) (float64, error) {
 	// If param is empty
 	if param == `` {
-		fmt.Println(errParse.Error(), `on`, param)
+		zap.L().Error(errParse.Error() + ` on ` + param)
 		return 0, errParse
 	}
 
 	// Parse
 	n, err := strconv.ParseFloat(param, 64)
 	if err != nil {
-		fmt.Println(errParse.Error(), `on`, param)
+		zap.L().Error(errParse.Error() + ` on ` + param)
 		return 0, errParse
 	}
 

@@ -2,7 +2,6 @@ package server
 
 import (
 	"flag"
-	"fmt"
 	"net/http"
 	"os"
 
@@ -10,6 +9,7 @@ import (
 	"github.com/Jourloy/go-metrics-collector/internal/server/storage/repository"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
+	"go.uber.org/zap"
 )
 
 var (
@@ -18,7 +18,7 @@ var (
 
 func Start() {
 	if err := godotenv.Load(); err != nil {
-		fmt.Println(`.env.server not found`)
+		zap.L().Warn(`.env.server not found`)
 	}
 
 	flag.Parse()
@@ -38,7 +38,7 @@ func Start() {
 	if !exist {
 		if err := r.Run(*Host); err != nil {
 			if err == http.ErrServerClosed {
-				fmt.Println(`Server closed`)
+				zap.L().Info(`Server closed`)
 			} else {
 				panic(err)
 			}
@@ -46,7 +46,7 @@ func Start() {
 	} else {
 		if err := r.Run(hostENV); err != nil {
 			if err == http.ErrServerClosed {
-				fmt.Println(`Server closed`)
+				zap.L().Info(`Server closed`)
 			} else {
 				panic(err)
 			}

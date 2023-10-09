@@ -9,6 +9,8 @@ import (
 	"runtime"
 	"strconv"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 var (
@@ -42,7 +44,6 @@ func CreateCollector() *Collector {
 
 // StartTickers starts the tickers for collecting and sending metrics in the Collector struct.
 func (c *Collector) StartTickers() {
-
 	pollENV, pollExist := os.LookupEnv(`POLL_INTERVAL`)
 	if pollExist {
 		i, err := strconv.Atoi(pollENV)
@@ -66,7 +67,7 @@ func (c *Collector) StartTickers() {
 	collectTicker := time.NewTicker(time.Duration(PollInterval) * time.Second)
 	sendTicker := time.NewTicker(time.Duration(ReportInterval) * time.Second)
 
-	fmt.Println(`Collector's tickers started`)
+	zap.L().Info(`Collector's tickers started`)
 
 	for {
 		select {
@@ -82,7 +83,7 @@ func (c *Collector) StartTickers() {
 //
 // It closes the 'done' channel and prints a message to the console.
 func (c *Collector) StopTickers() bool {
-	fmt.Println(`Collector's tickers stopped`)
+	zap.L().Info(`Collector's tickers stopped`)
 	close(c.done)
 	return true
 }
@@ -121,7 +122,7 @@ func (c *Collector) collectMetric() {
 
 	c.counter[`PollCount`]++
 
-	fmt.Println(`Metrics collected`)
+	zap.L().Debug(`Metrics collected`)
 }
 
 func (c *Collector) sendMetrics() {
@@ -133,7 +134,7 @@ func (c *Collector) sendMetrics() {
 		c.sendPOST(`counter`, name, fmt.Sprintf(`%d`, value))
 	}
 
-	fmt.Println(`Send metrics`)
+	zap.L().Debug(`Metrics sended`)
 }
 
 func (c *Collector) sendPOST(metricType string, name string, value string) {
@@ -147,7 +148,7 @@ func (c *Collector) sendPOST(metricType string, name string, value string) {
 
 	res, err := http.Post(`http://`+Host+`/update/`+metricType+`/`+name+`/`+value, `text/plain`, nil)
 	if err != nil {
-		fmt.Println(err)
+		zap.L().Error(err.Error())
 		return
 	}
 	res.Body.Close()
