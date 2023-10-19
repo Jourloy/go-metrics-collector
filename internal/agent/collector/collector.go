@@ -14,9 +14,9 @@ import (
 )
 
 var (
-	ServerAddress  = *flag.String("a", `localhost:8080`, "Host of the server")
-	ReportInterval = *flag.Duration("r", 5, "Report Interval")
-	PollInterval   = *flag.Duration("p", 2, "Poll Interval")
+	ServerAddress  = flag.String("a", `localhost:8080`, "Host of the server")
+	ReportInterval = flag.Duration("r", 5, "Report Interval")
+	PollInterval   = flag.Duration("p", 2, "Poll Interval")
 )
 
 type Collector struct {
@@ -29,18 +29,20 @@ type Collector struct {
 // variables by checking for corresponding environment variables.
 func init() {
 	if hostENV, exist := os.LookupEnv(`ADDRESS`); exist {
-		ServerAddress = hostENV
+		ServerAddress = &hostENV
 	}
 
 	if pollENV, exist := os.LookupEnv(`POLL_INTERVAL`); exist {
 		if i, err := strconv.Atoi(pollENV); err == nil {
-			PollInterval = time.Duration(i)
+			duration := time.Duration(i)
+			PollInterval = &duration
 		}
 	}
 
 	if reportENV, exist := os.LookupEnv(`REPORT_INTERVAL`); exist {
 		if i, err := strconv.Atoi(reportENV); err == nil {
-			ReportInterval = time.Duration(i)
+			duration := time.Duration(i)
+			ReportInterval = &duration
 		}
 	}
 }
@@ -62,8 +64,8 @@ func (c *Collector) StartTickers() {
 	zap.L().Debug(fmt.Sprintf(`Report Interval: %d`, ReportInterval))
 
 	// Start tickers
-	collectTicker := time.NewTicker(time.Duration(PollInterval) * time.Second)
-	sendTicker := time.NewTicker(time.Duration(ReportInterval) * time.Second)
+	collectTicker := time.NewTicker(time.Duration(*PollInterval) * time.Second)
+	sendTicker := time.NewTicker(time.Duration(*ReportInterval) * time.Second)
 
 	zap.L().Info(`Collector's tickers started`)
 
@@ -149,7 +151,7 @@ func (c *Collector) sendMetrics() {
 //
 // If there is an error making the POST request, it logs the error.
 func (c *Collector) sendPOST(metricType string, name string, value string) {
-	res, err := http.Post(`http://`+ServerAddress+`/update/`+metricType+`/`+name+`/`+value, `text/plain`, nil)
+	res, err := http.Post(`http://`+*ServerAddress+`/update/`+metricType+`/`+name+`/`+value, `text/plain`, nil)
 	if err != nil {
 		zap.L().Error(err.Error())
 		return
