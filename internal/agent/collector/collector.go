@@ -15,8 +15,8 @@ import (
 
 var (
 	ServerAddress  = flag.String("a", `localhost:8080`, "Host of the server")
-	ReportInterval = flag.Duration("r", 5, "Report Interval")
-	PollInterval   = flag.Duration("p", 2, "Poll Interval")
+	ReportInterval = flag.Int("r", 5, "Report Interval")
+	PollInterval   = flag.Int("p", 2, "Poll Interval")
 )
 
 type Collector struct {
@@ -34,15 +34,13 @@ func init() {
 
 	if pollENV, exist := os.LookupEnv(`POLL_INTERVAL`); exist {
 		if i, err := strconv.Atoi(pollENV); err == nil {
-			duration := time.Duration(i)
-			PollInterval = &duration
+			PollInterval = &i
 		}
 	}
 
 	if reportENV, exist := os.LookupEnv(`REPORT_INTERVAL`); exist {
 		if i, err := strconv.Atoi(reportENV); err == nil {
-			duration := time.Duration(i)
-			ReportInterval = &duration
+			ReportInterval = &i
 		}
 	}
 }
