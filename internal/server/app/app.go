@@ -24,7 +24,7 @@ func GetAppSevice(s storage.Storage) *AppSevice {
 //
 // It retrieves the values from the storage and merges them into a single map.
 // The merged map is then passed to the HTML template for rendering.
-func (a *AppSevice) ServeHTTP(ctx *gin.Context) {
+func (a *AppSevice) GetAllMetrics(ctx *gin.Context) {
 	gauge, counter := a.storage.GetValues()
 	merged := make(map[string]any, len(gauge)+len(counter))
 
@@ -38,4 +38,9 @@ func (a *AppSevice) ServeHTTP(ctx *gin.Context) {
 	ctx.HTML(http.StatusOK, `index.tmpl`, gin.H{
 		`merged`: merged,
 	})
+}
+
+// Return an HTTP response with the string "Live".
+func (a *AppSevice) Live(c *gin.Context) {
+	c.String(http.StatusOK, "Live")
 }

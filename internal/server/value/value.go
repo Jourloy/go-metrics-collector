@@ -27,7 +27,7 @@ func GetValueSevice(s storage.Storage) *ValueSevice {
 }
 
 // Handle the HTTP request for the ValueService.
-func (v *ValueSevice) ServeHTTP(ctx *gin.Context) {
+func (v *ValueSevice) ShowValue(ctx *gin.Context) {
 	// Retrieve the metric type and name from the request parameters.
 	metricType, typeFound := ctx.Params.Get(`type`)
 	metricName, nameFound := ctx.Params.Get(`name`)

@@ -41,9 +41,10 @@ func TestRegisterValueHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := gin.Default()
+			g := r.Group(`/value`)
 			s := repository.CreateRepository()
 
-			RegisterValueHandler(r, s)
+			RegisterValueHandler(g, s)
 
 			req := httptest.NewRequest(http.MethodGet, tt.args.path, nil)
 			rec := httptest.NewRecorder()

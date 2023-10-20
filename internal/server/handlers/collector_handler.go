@@ -7,10 +7,8 @@ import (
 )
 
 // Register a collector handler in a gin.Engine instance.
-func RegisterCollectorHandler(r *gin.Engine, s storage.Storage) {
-	metricEndpoint := `/update`
+func RegisterCollectorHandler(g *gin.RouterGroup, s storage.Storage) {
+	collectorService := collector.CollectMetric(s)
 
-	collectorHandler := collector.CollectMetric(s)
-
-	r.POST(metricEndpoint+`/:type/:name/:value`, collectorHandler.ServeHTTP)
+	g.POST(`/:type/:name/:value`, collectorService.ProcessMetrics)
 }

@@ -7,8 +7,8 @@ import (
 )
 
 // Register a value handler for the specified Gin Engine.
-func RegisterValueHandler(r *gin.Engine, s storage.Storage) {
-	valueHandler := value.GetValueSevice(s)
+func RegisterValueHandler(g *gin.RouterGroup, s storage.Storage) {
+	valueService := value.GetValueSevice(s)
 
-	r.GET(`/value/:type/:name`, valueHandler.ServeHTTP)
+	g.GET(`/:type/:name`, valueService.ShowValue)
 }

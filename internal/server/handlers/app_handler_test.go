@@ -44,9 +44,10 @@ func TestRegisterAppHandler(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			r := gin.Default()
+			g := r.Group(`/`)
 			s := repository.CreateRepository()
 
-			RegisterAppHandler(r, s)
+			RegisterAppHandler(g, s)
 
 			req := httptest.NewRequest(tt.args.method, tt.args.path, nil)
 			rec := httptest.NewRecorder()

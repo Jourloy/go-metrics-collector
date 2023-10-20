@@ -44,7 +44,7 @@ func CollectMetric(s storage.Storage) *CollectorHandler {
 // For `counter` type, it parses the counter value and updates the counter metric.
 // For `gauge` type, it parses the gauge value and updates the gauge metric.
 // Finally, it sets the response status to OK and returns the response.
-func (c *CollectorHandler) ServeHTTP(ctx *gin.Context) {
+func (c *CollectorHandler) ProcessMetrics(ctx *gin.Context) {
 	// Parse URL
 	parsedURL, err := c.parseURL(ctx.Request.URL.String())
 	if err != nil {

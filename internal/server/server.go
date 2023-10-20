@@ -4,6 +4,8 @@ import (
 	"flag"
 	"net/http"
 	"os"
+	"strconv"
+	"time"
 
 	"github.com/Jourloy/go-metrics-collector/internal/server/handlers"
 	"github.com/Jourloy/go-metrics-collector/internal/server/storage/repository"
@@ -35,15 +37,23 @@ func Start() {
 	s := repository.CreateRepository()
 
 	// Initiate handlers
-	r := gin.Default()
+	r := gin.New()
+
+	// Set logger middleware
+	r.Use(logger())
 
 	// Load HTML templates
 	r.LoadHTMLGlob("templates/*")
 
+	// Initiate router groups
+	appGroup := r.Group(`/`)
+	collectorGroup := r.Group(`/update`)
+	valueGroup := r.Group(`/value`)
+
 	// Register application, collector, and value handlers
-	handlers.RegisterAppHandler(r, s)
-	handlers.RegisterCollectorHandler(r, s)
-	handlers.RegisterValueHandler(r, s)
+	handlers.RegisterAppHandler(appGroup, s)
+	handlers.RegisterCollectorHandler(collectorGroup, s)
+	handlers.RegisterValueHandler(valueGroup, s)
 
 	// Run the server on the specified host
 	if err := r.Run(*Host); err != nil {
@@ -52,6 +62,36 @@ func Start() {
 			zap.L().Info("Server closed")
 		} else {
 			panic(err)
+		}
+	}
+}
+
+func logger() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		t := time.Now()
+		c.Next()
+
+		latency := time.Since(t)
+		status := c.Writer.Status()
+		method := c.Request.Method
+		path := c.Request.URL.Path
+
+		if method == `GET` {
+			responseSize := c.Writer.Size()
+			zap.L().Info(
+				method,
+				zap.String(`status`, strconv.Itoa(status)),
+				zap.Int(`size`, responseSize),
+				zap.String(`path`, path),
+				zap.Duration(`latency`, latency),
+			)
+		} else {
+			zap.L().Info(
+				method,
+				zap.String(`status`, strconv.Itoa(status)),
+				zap.String(`path`, path),
+				zap.Duration(`latency`, latency),
+			)
 		}
 	}
 }
