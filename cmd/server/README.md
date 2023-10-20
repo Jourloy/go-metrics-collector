@@ -1,3 +1,19 @@
-# cmd/agent
+# cmd/server
 
-В данной директории будет содержаться код Сервера, который скомпилируется в бинарное приложение
+## Description
+
+This is a server for collecting metrics. 
+
+Now used only memory storage.
+
+## Run
+
+```bash
+$ go run ./cmd/server
+```
+
+## Test
+
+```bash
+$ go test ./internal/server/...
+```
