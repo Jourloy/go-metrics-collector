@@ -4,6 +4,10 @@
 
 About agent and server read more information in **cmd** folder.
 
+## Changelog
+
+You can find changelog in `/internal/README.md` file.
+
 ## Template update
 
 Add template in remote:
