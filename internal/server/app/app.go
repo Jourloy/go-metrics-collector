@@ -8,6 +8,7 @@ import (
 
 	"github.com/Jourloy/go-metrics-collector/internal/server/storage"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 var errType error = errors.New(`type not found`)
@@ -106,7 +107,7 @@ func (a *AppSevice) UpdateMetrics(ctx *gin.Context) {
 }
 
 // ShowValue handles the request to show a metric value.
-func (a *AppSevice) ShowValue(ctx *gin.Context) {
+func (a *AppSevice) GetMetric(ctx *gin.Context) {
 	// Parse body
 	template, err := a.parseBody(ctx)
 	if err != nil {
@@ -117,33 +118,26 @@ func (a *AppSevice) ShowValue(ctx *gin.Context) {
 	// Get
 	var metric Metric
 	if template.MType == `counter` {
-		if metric.Delta == nil {
-			ctx.String(http.StatusBadRequest, errCounter.Error())
-			return
-		}
+		zap.L().Debug(template.ID)
 		u, err := a.storage.GetCounterValue(template.ID)
-		if err {
+		if !err {
 			ctx.String(http.StatusNotFound, errNotFound.Error())
 			return
 		}
 		metric = Metric{
-			ID:    metric.ID,
-			MType: metric.MType,
+			ID:    template.ID,
+			MType: template.MType,
 			Delta: &u,
 		}
 	} else if template.MType == `gauge` {
-		if metric.Value == nil {
-			ctx.String(http.StatusBadRequest, errGauge.Error())
-			return
-		}
 		u, err := a.storage.GetGaugeValue(template.ID)
-		if err {
+		if !err {
 			ctx.String(http.StatusNotFound, errNotFound.Error())
 			return
 		}
 		metric = Metric{
-			ID:    metric.ID,
-			MType: metric.MType,
+			ID:    template.ID,
+			MType: template.MType,
 			Value: &u,
 		}
 	} else {

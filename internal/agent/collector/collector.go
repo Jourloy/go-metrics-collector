@@ -1,6 +1,7 @@
 package collector
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"math/rand"
@@ -8,6 +9,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -25,8 +27,18 @@ type Collector struct {
 	done    chan struct{}
 }
 
+type Metric struct {
+	ID    string   `json:"id"`              // Name of metric
+	MType string   `json:"type"`            // Gauge or Counter
+	Delta *int64   `json:"delta,omitempty"` // Value if metric is a counter
+	Value *float64 `json:"value,omitempty"` // Value if metric is a gauge
+}
+
 // init initializes the ServerAddress, PollInterval, and ReportInterval
 // variables by checking for corresponding environment variables.
+//
+// No parameters.
+// No return values.
 func init() {
 	if hostENV, exist := os.LookupEnv(`ADDRESS`); exist {
 		ServerAddress = &hostENV
@@ -47,7 +59,9 @@ func init() {
 
 // CreateCollector creates a new instance of the Collector struct.
 //
-// Returns a pointer to a Collector.
+// No parameters.
+// Returns:
+// - a pointer to a Collector.
 func CreateCollector() *Collector {
 	return &Collector{
 		gauge:   make(map[string]float64),
@@ -57,6 +71,9 @@ func CreateCollector() *Collector {
 }
 
 // StartTickers starts the tickers for collecting and sending metrics in the Collector struct.
+//
+// No parameters.
+// No return values.
 func (c *Collector) StartTickers() {
 	zap.L().Debug(fmt.Sprintf(`Poll Interval: %d`, PollInterval))
 	zap.L().Debug(fmt.Sprintf(`Report Interval: %d`, ReportInterval))
@@ -81,12 +98,17 @@ func (c *Collector) StartTickers() {
 
 // StopTickers stops the tickers of the Collector.
 //
-// It closes the 'done' channel and prints a message to the console.
+// No parameters.
+// No return values.
 func (c *Collector) StopTickers() {
 	zap.L().Info(`Collector's tickers stopped`)
 	close(c.done)
 }
 
+// collectMetric collects various metrics and stores them in the gauge and counter maps.
+//
+// No parameters.
+// No return values.
 func (c *Collector) collectMetric() {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
@@ -124,32 +146,40 @@ func (c *Collector) collectMetric() {
 	zap.L().Debug(`Metrics collected`)
 }
 
-// Sends the collected metrics to the backend.
-// After sending the metrics, it logs a debug message.
+// sendMetrics sends the metrics to the server.
+//
+// No parameters.
+// No return values..
 func (c *Collector) sendMetrics() {
 	for name, value := range c.gauge {
-		c.sendPOST(`gauge`, name, fmt.Sprintf(`%f`, value))
+		c.sendPOST(Metric{
+			ID:    name,
+			MType: `gauge`,
+			Value: &value,
+		})
 	}
 
 	for name, value := range c.counter {
-		c.sendPOST(`counter`, name, fmt.Sprintf(`%d`, value))
+		c.sendPOST(Metric{
+			ID:    name,
+			MType: `counter`,
+			Delta: &value,
+		})
 	}
 
 	zap.L().Debug(`Metrics sent`)
 }
 
-// Sends a POST request to the metrics server to update a metric.
+// sendPOST sends a POST request to the server with the given metric.
 //
-// metricType is the type of metric (e.g. "counter").
-// name is the name of the metric.
-// value is the value to update the metric to.
+// Parameters:
+// - metric: the metric to be sent
 //
-// It constructs a POST request to http://{ServerAddress}/update/{metricType}/{name}/{value}
-// to update the given metric on the metrics server.
-//
-// If there is an error making the POST request, it logs the error.
-func (c *Collector) sendPOST(metricType string, name string, value string) {
-	res, err := http.Post(`http://`+*ServerAddress+`/update/`+metricType+`/`+name+`/`+value, `text/plain`, nil)
+// Returns:
+// - None
+func (c *Collector) sendPOST(metric Metric) {
+	b, _ := json.Marshal(metric)
+	res, err := http.Post(`http://`+*ServerAddress+`/update`, `application/json`, strings.NewReader(string(b)))
 	if err != nil {
 		zap.L().Error(err.Error())
 		return
