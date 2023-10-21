@@ -10,5 +10,5 @@ import (
 func RegisterCollectorHandler(g *gin.RouterGroup, s storage.Storage) {
 	collectorService := collector.CollectMetric(s)
 
-	g.POST(`/:type/:name/:value`, collectorService.ProcessMetrics)
+	g.POST(`/`, collectorService.ProcessMetrics)
 }
