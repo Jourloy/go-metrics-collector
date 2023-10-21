@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -11,34 +12,149 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestRegisterAppHandler(t *testing.T) {
+type Metric struct {
+	ID    string  `json:"id"`              // Name of metric
+	MType string  `json:"type"`            // Gauge or Counter
+	Delta int64   `json:"delta,omitempty"` // Value if metric is a counter
+	Value float64 `json:"value,omitempty"` // Value if metric is a gauge
+}
+
+func TestAppHandlers(t *testing.T) {
 	type args struct {
 		path   string
 		method string
+		body   Metric
 	}
 	tests := []struct {
-		name     string
-		args     args
-		wantCode int
-		wantBody string
+		name         string
+		args         args
+		wantCode     int
+		wantErrBody  string
+		wantSuccBody Metric
 	}{
 		{
-			name: `Negative #1`,
+			name: `Negative #1 (Live not found)`,
 			args: args{
 				path:   `/live`,
 				method: http.MethodPost,
 			},
-			wantCode: 404,
-			wantBody: `404 page not found`,
+			wantCode:    404,
+			wantErrBody: `404 page not found`,
 		},
 		{
-			name: `Positive #1`,
+			name: `Negative #2 (Metric without body)`,
+			args: args{
+				path:   `/update`,
+				method: http.MethodPost,
+			},
+			wantCode:    400,
+			wantErrBody: `type not found`,
+		},
+		{
+			name: `Negative #3 (Metric with invalid type)`,
+			args: args{
+				path:   `/update`,
+				method: http.MethodPost,
+				body: Metric{
+					ID:    "test",
+					MType: "test",
+				},
+			},
+			wantCode:    400,
+			wantErrBody: `type not found`,
+		},
+		{
+			name: `Negative #4 (Metric counter fail)`,
+			args: args{
+				path:   `/update`,
+				method: http.MethodPost,
+				body: Metric{
+					ID:    "test",
+					MType: "counter",
+					Value: 1.1,
+				},
+			},
+			wantCode:    400,
+			wantErrBody: `counter value not found`,
+		},
+		{
+			name: `Negative #5 (Metric gauge fail)`,
+			args: args{
+				path:   `/update`,
+				method: http.MethodPost,
+				body: Metric{
+					ID:    "test",
+					MType: "gauge",
+					Delta: 1,
+				},
+			},
+			wantCode:    400,
+			wantErrBody: `gauge value not found`,
+		},
+		{
+			name: `Negative #1 (Value without body)`,
+			args: args{
+				path: `/value`,
+			},
+			wantCode:    404,
+			wantErrBody: `404 page not found`,
+		},
+		{
+			name: `Negative #2 (Value unknown name)`,
+			args: args{
+				path: `/value`,
+				body: Metric{
+					ID:    "t.e.s.t",
+					MType: "counter",
+				},
+			},
+			wantCode:    404,
+			wantErrBody: `404 page not found`,
+		},
+		{
+			name: `Positive #1 (Live success)`,
 			args: args{
 				path:   `/live`,
 				method: http.MethodGet,
 			},
+			wantCode:    200,
+			wantErrBody: `Live`,
+		},
+		{
+			name: `Positive #2 (Metric counter success)`,
+			args: args{
+				path:   `/update`,
+				method: http.MethodPost,
+				body: Metric{
+					ID:    "test",
+					MType: "counter",
+					Delta: 1,
+				},
+			},
 			wantCode: 200,
-			wantBody: `Live`,
+			wantSuccBody: Metric{
+				ID:    "test",
+				MType: "counter",
+				Delta: 1,
+			},
+		},
+		{
+			name: `Positive #3 (Metric gauge success)`,
+			args: args{
+				path:   `/update`,
+				method: http.MethodPost,
+				body: Metric{
+					ID:    "test",
+					MType: "gauge",
+					Value: 1.2,
+				},
+			},
+			wantCode: 200,
+			wantSuccBody: Metric{
+				ID:    "test",
+				MType: "gauge",
+				Value: 1.2,
+			},
 		},
 	}
 	for _, tt := range tests {
@@ -49,13 +165,18 @@ func TestRegisterAppHandler(t *testing.T) {
 
 			RegisterAppHandler(g, s)
 
-			req := httptest.NewRequest(tt.args.method, tt.args.path, nil)
+			b, _ := json.Marshal(tt.args.body)
+			req := httptest.NewRequest(tt.args.method, tt.args.path, strings.NewReader(string(b)))
 			rec := httptest.NewRecorder()
 
 			r.ServeHTTP(rec, req)
 
 			assert.Equal(t, tt.wantCode, rec.Code)
-			assert.Equal(t, tt.wantBody, strings.TrimSuffix(rec.Body.String(), "\n"))
+			if tt.wantErrBody != "" {
+				assert.Equal(t, tt.wantErrBody, strings.TrimSuffix(rec.Body.String(), "\n"))
+				return
+			}
+			assert.Equal(t, tt.wantSuccBody, tt.args.body)
 		})
 	}
 }

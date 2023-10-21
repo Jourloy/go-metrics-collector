@@ -47,13 +47,9 @@ func Start() {
 
 	// Initiate router groups
 	appGroup := r.Group(`/`)
-	collectorGroup := r.Group(`/update`)
-	valueGroup := r.Group(`/value`)
 
 	// Register application, collector, and value handlers
 	handlers.RegisterAppHandler(appGroup, s)
-	handlers.RegisterCollectorHandler(collectorGroup, s)
-	handlers.RegisterValueHandler(valueGroup, s)
 
 	// Run the server on the specified host
 	if err := r.Run(*Host); err != nil {
