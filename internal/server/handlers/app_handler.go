@@ -14,7 +14,7 @@ func RegisterAppHandler(g *gin.RouterGroup, s storage.Storage) {
 	g.GET(`/`, appService.GetAllMetrics)
 
 	g.POST(`/value`, appService.GetMetricByBody)
-	g.POST(`/value/:type/:name/`, appService.GetMetricByParams)
+	g.GET(`/value/:type/:name/`, appService.GetMetricByParams)
 
 	g.POST(`/update`, appService.UpdateMetricByBody)
 	g.POST(`/update/:type/:name/:value`, appService.UpdateMetricByParams)
