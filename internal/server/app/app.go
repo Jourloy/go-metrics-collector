@@ -184,18 +184,28 @@ func (a *AppSevice) GetMetricByParams(ctx *gin.Context) {
 	}
 
 	// Get metric
-	metric, err := a.getMetric(name, mType)
-	if err != nil {
-		ctx.String(http.StatusNotFound, errNotFound.Error())
+	if mType == `counter` {
+		u, err := a.storage.GetCounterValue(name)
+		if !err {
+			ctx.String(http.StatusNotFound, errNotFound.Error())
+			return
+		}
+
+		ctx.String(http.StatusOK, `%d`, u)
+		return
+	} else if mType == `gauge` {
+		u, err := a.storage.GetGaugeValue(name)
+		if !err {
+			ctx.String(http.StatusNotFound, errNotFound.Error())
+			return
+		}
+
+		ctx.String(http.StatusOK, `%g`, u)
+		return
+	} else {
+		ctx.String(http.StatusBadRequest, errType.Error())
 		return
 	}
-
-	if mType == `counter` {
-		ctx.String(http.StatusOK, `%d`, metric.Delta)
-	} else {
-		ctx.String(http.StatusOK, `%g`, metric.Value)
-	}
-
 }
 
 func (a *AppSevice) GetMetricByBody(ctx *gin.Context) {
@@ -207,41 +217,36 @@ func (a *AppSevice) GetMetricByBody(ctx *gin.Context) {
 	}
 
 	// Get metric
-	metric, err := a.getMetric(template.ID, template.MType)
-	if err != nil {
-		ctx.String(http.StatusBadRequest, err.Error())
+	var metric Metric
+	if template.MType == `counter` {
+		u, ok := a.storage.GetCounterValue(template.ID)
+		if !ok {
+			ctx.String(http.StatusNotFound, errNotFound.Error())
+			return
+		}
+		metric = Metric{
+			ID:    template.ID,
+			MType: template.MType,
+			Delta: &u,
+		}
+	} else if template.MType == `gauge` {
+		u, ok := a.storage.GetGaugeValue(template.ID)
+		if !ok {
+			ctx.String(http.StatusNotFound, errNotFound.Error())
+			return
+		}
+		metric = Metric{
+			ID:    template.ID,
+			MType: template.MType,
+			Value: &u,
+		}
+	} else {
+		ctx.String(http.StatusBadRequest, errType.Error())
 		return
 	}
 
 	ctx.Header(`Content-Type`, `application/json`)
 	ctx.JSON(http.StatusOK, metric)
-}
-
-func (a *AppSevice) getMetric(name string, mType string) (Metric, error) {
-	var metric Metric
-	if mType == `counter` {
-		u, err := a.storage.GetCounterValue(name)
-		if !err {
-			return Metric{}, errNotFound
-		}
-		metric = Metric{
-			ID:    name,
-			MType: mType,
-			Delta: &u,
-		}
-	} else if mType == `gauge` {
-		u, err := a.storage.GetGaugeValue(name)
-		if !err {
-			return Metric{}, errNotFound
-		}
-		metric = Metric{
-			ID:    name,
-			MType: mType,
-			Value: &u,
-		}
-	}
-
-	return metric, nil
 }
 
 func (a *AppSevice) parseBody(ctx *gin.Context) (Metric, error) {
