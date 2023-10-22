@@ -197,11 +197,11 @@ func TestAppParamsHandlers(t *testing.T) {
 		{
 			name: `Negative #1 (Metric without name)`,
 			args: args{
-				path:   `/update/counter/`,
+				path:   `/update/counter`,
 				method: http.MethodPost,
 			},
 			wantCode:    404,
-			wantErrBody: `404 not found`,
+			wantErrBody: `name is invalid or not found`,
 		},
 		{
 			name: `Negative #2 (Metric with invalid type)`,
