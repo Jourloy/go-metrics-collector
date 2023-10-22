@@ -78,6 +78,6 @@ func (r *MemStorage) UpdateGaugeMetric(name string, value float64) float64 {
 // Returns:
 // - the updated value of the counter metric (int64)
 func (r *MemStorage) UpdateCounterMetric(name string, value int64) int64 {
-	r.counter[name] = value
+	r.counter[name] += value
 	return r.counter[name]
 }

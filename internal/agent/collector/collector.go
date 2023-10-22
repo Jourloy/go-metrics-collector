@@ -167,6 +167,9 @@ func (c *Collector) sendMetrics() {
 		})
 	}
 
+	// Reset poll count
+	c.counter[`PollCount`] = 0
+
 	zap.L().Debug(`Metrics sent`)
 }
 
