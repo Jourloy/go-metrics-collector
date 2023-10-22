@@ -5,17 +5,17 @@ import (
 	"errors"
 	"io"
 	"net/http"
+	"strconv"
 
 	"github.com/Jourloy/go-metrics-collector/internal/server/storage"
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 )
 
 var errType error = errors.New(`type not found`)
-var errBody error = errors.New(`body not found`)
 var errCounter error = errors.New(`counter value not found`)
 var errGauge error = errors.New(`gauge value not found`)
 var errNotFound error = errors.New(`404 page not found`)
+var errBody error = errors.New(`body not found`)
 
 type AppSevice struct {
 	storage storage.Storage
@@ -63,91 +63,158 @@ func (a *AppSevice) Live(c *gin.Context) {
 	c.String(http.StatusOK, "Live")
 }
 
-func (a *AppSevice) UpdateMetrics(ctx *gin.Context) {
+func (a *AppSevice) UpdateMetricByParams(ctx *gin.Context) {
+	name := ctx.Param(`name`)
+	mType := ctx.Param(`type`)
+	value := ctx.Param(`value`)
 
-	// Parse body
+	// Check URL params
+	if name == `` || mType == `` || value == `` {
+		ctx.String(http.StatusBadRequest, errNotFound.Error())
+		return
+	}
+
+	// Update metric
+	metric, err := a.updateMetric(name, mType, nil, nil, &value)
+	if err != nil {
+		ctx.String(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	ctx.Header(`Content-Type`, `application/json`)
+	ctx.JSON(http.StatusOK, metric)
+
+}
+
+func (a *AppSevice) UpdateMetricByBody(ctx *gin.Context) {
+	// Check body
 	metric, err := a.parseBody(ctx)
 	if err != nil {
 		ctx.String(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Update
-	var updated Metric
-	if metric.MType == `counter` {
-		if metric.Delta == nil {
-			ctx.String(http.StatusBadRequest, errCounter.Error())
-			return
-		}
-		u := a.storage.UpdateCounterMetric(metric.ID, *metric.Delta)
-		updated = Metric{
-			ID:    metric.ID,
-			MType: metric.MType,
-			Delta: &u,
-		}
-	} else if metric.MType == `gauge` {
-		if metric.Value == nil {
-			ctx.String(http.StatusBadRequest, errGauge.Error())
-			return
-		}
-		u := a.storage.UpdateGaugeMetric(metric.ID, *metric.Value)
-		updated = Metric{
-			ID:    metric.ID,
-			MType: metric.MType,
-			Value: &u,
-		}
-	} else {
-		ctx.String(http.StatusBadRequest, errType.Error())
+	// Update metric
+	updated, err := a.updateMetric(metric.ID, metric.MType, metric.Value, metric.Delta, nil)
+	if err != nil {
+		ctx.String(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Response
 	ctx.Header(`Content-Type`, `application/json`)
 	ctx.JSON(http.StatusOK, updated)
 }
 
+func (a *AppSevice) updateMetric(name string, mType string, value *float64, delta *int64, strValue *string) (Metric, error) {
+	var updated Metric
+	if mType == `counter` {
+		var v int64
+		if delta == nil {
+			parsedValue, err := strconv.ParseInt(*strValue, 10, 64)
+			if err != nil {
+				return Metric{}, errCounter
+			}
+			v = parsedValue
+		} else {
+			v = *delta
+		}
+		u := a.storage.UpdateCounterMetric(name, v)
+		updated = Metric{
+			ID:    name,
+			MType: mType,
+			Delta: &u,
+		}
+	} else if mType == `gauge` {
+		var v float64
+		if value == nil {
+			parsedValue, err := strconv.ParseFloat(*strValue, 64)
+			if err != nil {
+				return Metric{}, errCounter
+			}
+			v = parsedValue
+		} else {
+			v = *value
+		}
+		u := a.storage.UpdateGaugeMetric(name, v)
+		updated = Metric{
+			ID:    name,
+			MType: mType,
+			Value: &u,
+		}
+	} else {
+		return Metric{}, errType
+	}
+
+	return updated, nil
+}
+
 // ShowValue handles the request to show a metric value.
-func (a *AppSevice) GetMetric(ctx *gin.Context) {
-	// Parse body
+func (a *AppSevice) GetMetricByParams(ctx *gin.Context) {
+	name := ctx.Param(`name`)
+	mType := ctx.Param(`type`)
+
+	// Check URL params
+	if name == `` || mType == `` {
+		ctx.String(http.StatusBadRequest, errNotFound.Error())
+		return
+	}
+
+	// Get metric
+	metric, err := a.getMetric(name, mType)
+	if err != nil {
+		ctx.String(http.StatusBadRequest, errNotFound.Error())
+		return
+	}
+
+	ctx.Header(`Content-Type`, `application/json`)
+	ctx.JSON(http.StatusOK, metric)
+
+}
+
+func (a *AppSevice) GetMetricByBody(ctx *gin.Context) {
+	// Check body
 	template, err := a.parseBody(ctx)
 	if err != nil {
 		ctx.String(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Get
-	var metric Metric
-	if template.MType == `counter` {
-		zap.L().Debug(template.ID)
-		u, err := a.storage.GetCounterValue(template.ID)
-		if !err {
-			ctx.String(http.StatusNotFound, errNotFound.Error())
-			return
-		}
-		metric = Metric{
-			ID:    template.ID,
-			MType: template.MType,
-			Delta: &u,
-		}
-	} else if template.MType == `gauge` {
-		u, err := a.storage.GetGaugeValue(template.ID)
-		if !err {
-			ctx.String(http.StatusNotFound, errNotFound.Error())
-			return
-		}
-		metric = Metric{
-			ID:    template.ID,
-			MType: template.MType,
-			Value: &u,
-		}
-	} else {
-		ctx.String(http.StatusBadRequest, errType.Error())
+	// Get metric
+	metric, err := a.getMetric(template.ID, template.MType)
+	if err != nil {
+		ctx.String(http.StatusBadRequest, err.Error())
 		return
 	}
 
-	// Response
 	ctx.Header(`Content-Type`, `application/json`)
 	ctx.JSON(http.StatusOK, metric)
+}
+
+func (a *AppSevice) getMetric(name string, mType string) (Metric, error) {
+	var metric Metric
+	if mType == `counter` {
+		u, err := a.storage.GetCounterValue(name)
+		if !err {
+			return Metric{}, errNotFound
+		}
+		metric = Metric{
+			ID:    name,
+			MType: mType,
+			Delta: &u,
+		}
+	} else if mType == `gauge` {
+		u, err := a.storage.GetGaugeValue(name)
+		if !err {
+			return Metric{}, errNotFound
+		}
+		metric = Metric{
+			ID:    name,
+			MType: mType,
+			Value: &u,
+		}
+	}
+
+	return metric, nil
 }
 
 func (a *AppSevice) parseBody(ctx *gin.Context) (Metric, error) {
