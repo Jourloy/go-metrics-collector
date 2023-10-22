@@ -71,13 +71,13 @@ func (a *AppSevice) UpdateMetricByParams(ctx *gin.Context) {
 	value := ctx.Param(`value`)
 
 	// Check URL params
-	if name == `` {
-		ctx.String(http.StatusBadRequest, errName.Error())
+	if mType == `` {
+		ctx.String(http.StatusBadRequest, errType.Error())
 		return
 	}
 
-	if mType == `` {
-		ctx.String(http.StatusBadRequest, errType.Error())
+	if name == `` {
+		ctx.String(http.StatusNotFound, errName.Error())
 		return
 	}
 
