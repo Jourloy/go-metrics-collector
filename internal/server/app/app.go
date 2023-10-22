@@ -11,7 +11,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var errType error = errors.New(`type not found`)
+var errType error = errors.New(`type is invalid or not found`)
+var errValue error = errors.New(`value is invalid or not found`)
+var errName error = errors.New(`name is invalid or not found`)
 var errCounter error = errors.New(`counter value not found`)
 var errGauge error = errors.New(`gauge value not found`)
 var errNotFound error = errors.New(`404 page not found`)
@@ -69,8 +71,18 @@ func (a *AppSevice) UpdateMetricByParams(ctx *gin.Context) {
 	value := ctx.Param(`value`)
 
 	// Check URL params
-	if name == `` || mType == `` || value == `` {
-		ctx.String(http.StatusBadRequest, errNotFound.Error())
+	if name == `` {
+		ctx.String(http.StatusBadRequest, errName.Error())
+		return
+	}
+
+	if mType == `` {
+		ctx.String(http.StatusBadRequest, errType.Error())
+		return
+	}
+
+	if value == `` {
+		ctx.String(http.StatusBadRequest, errValue.Error())
 		return
 	}
 
@@ -174,7 +186,7 @@ func (a *AppSevice) GetMetricByParams(ctx *gin.Context) {
 	// Get metric
 	metric, err := a.getMetric(name, mType)
 	if err != nil {
-		ctx.String(http.StatusBadRequest, errNotFound.Error())
+		ctx.String(http.StatusNotFound, errNotFound.Error())
 		return
 	}
 

@@ -19,7 +19,8 @@ type Metric struct {
 	Value float64 `json:"value,omitempty"` // Value if metric is a gauge
 }
 
-func TestAppHandlers(t *testing.T) {
+// TestAppBodyHandlers tests the new API where we can send body.
+func TestAppBodyHandlers(t *testing.T) {
 	type args struct {
 		path   string
 		method string
@@ -48,7 +49,7 @@ func TestAppHandlers(t *testing.T) {
 				method: http.MethodPost,
 			},
 			wantCode:    400,
-			wantErrBody: `type not found`,
+			wantErrBody: `type is invalid or not found`,
 		},
 		{
 			name: `Negative #3 (Metric with invalid type)`,
@@ -57,11 +58,11 @@ func TestAppHandlers(t *testing.T) {
 				method: http.MethodPost,
 				body: Metric{
 					ID:    "test",
-					MType: "test",
+					MType: "invalid",
 				},
 			},
 			wantCode:    400,
-			wantErrBody: `type not found`,
+			wantErrBody: `type is invalid or not found`,
 		},
 		{
 			name: `Negative #4 (Metric counter fail)`,
@@ -177,6 +178,92 @@ func TestAppHandlers(t *testing.T) {
 				return
 			}
 			assert.Equal(t, tt.wantSuccBody, tt.args.body)
+		})
+	}
+}
+
+// TestAppParamsHandlers tests the old API where we send params.
+func TestAppParamsHandlers(t *testing.T) {
+	type args struct {
+		path   string
+		method string
+	}
+	tests := []struct {
+		name        string
+		args        args
+		wantCode    int
+		wantErrBody string
+	}{
+		{
+			name: `Negative #1 (Metric with invalid type)`,
+			args: args{
+				path:   `/update/invalid/test/1`,
+				method: http.MethodPost,
+			},
+			wantCode:    400,
+			wantErrBody: `type is invalid or not found`,
+		},
+		{
+			name: `Negative #2 (Metric without value)`,
+			args: args{
+				path:   `/update/counter/testCounter`,
+				method: http.MethodPost,
+			},
+			wantCode:    400,
+			wantErrBody: `value is invalid or not found`,
+		},
+		{
+			name: `Negative #3 (Metric counter fail)`,
+			args: args{
+				path:   `/update/counter/test/1.1`,
+				method: http.MethodPost,
+			},
+			wantCode:    400,
+			wantErrBody: `counter value not found`,
+		},
+		{
+			name: `Negative #4 (Value unknown name)`,
+			args: args{
+				path: `/value/counter/tist`,
+			},
+			wantCode:    404,
+			wantErrBody: `404 page not found`,
+		},
+		{
+			name: `Positive #1 (Metric counter success)`,
+			args: args{
+				path:   `/update/counter/test/1`,
+				method: http.MethodPost,
+			},
+			wantCode: 200,
+		},
+		{
+			name: `Positive #2 (Metric gauge success)`,
+			args: args{
+				path:   `/update/gauge/test/1.2`,
+				method: http.MethodPost,
+			},
+			wantCode: 200,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			r := gin.Default()
+			g := r.Group(`/`)
+			s := repository.CreateRepository()
+
+			RegisterAppHandler(g, s)
+
+			req := httptest.NewRequest(tt.args.method, tt.args.path, nil)
+			rec := httptest.NewRecorder()
+
+			r.ServeHTTP(rec, req)
+
+			assert.Equal(t, tt.wantCode, rec.Code)
+			if tt.wantErrBody != "" {
+				assert.Equal(t, tt.wantErrBody, strings.TrimSuffix(rec.Body.String(), "\n"))
+				return
+			}
 		})
 	}
 }
