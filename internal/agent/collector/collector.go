@@ -122,6 +122,7 @@ func (c *Collector) collectMetric() {
 	c.gauge[`HeapIdle`] = float64(memStats.HeapIdle)
 	c.gauge[`HeapInuse`] = float64(memStats.HeapInuse)
 	c.gauge[`HeapReleased`] = float64(memStats.HeapReleased)
+	c.gauge[`HeapObjects`] = float64(memStats.HeapObjects)
 	c.gauge[`HeapSys`] = float64(memStats.HeapSys)
 	c.gauge[`LastGC`] = float64(memStats.LastGC)
 	c.gauge[`Lookups`] = float64(memStats.Lookups)
