@@ -109,15 +109,21 @@ func (a *AppSevice) updateMetric(name string, mType string, value *float64, delt
 	var updated Metric
 	if mType == `counter` {
 		var v int64
-		if delta == nil {
+
+		// Find `Delta` value
+		if delta != nil {
+			v = *delta
+		} else if strValue != nil {
 			parsedValue, err := strconv.ParseInt(*strValue, 10, 64)
 			if err != nil {
 				return Metric{}, errCounter
 			}
 			v = parsedValue
 		} else {
-			v = *delta
+			return Metric{}, errCounter
 		}
+
+		// Update counter
 		u := a.storage.UpdateCounterMetric(name, v)
 		updated = Metric{
 			ID:    name,
@@ -126,15 +132,21 @@ func (a *AppSevice) updateMetric(name string, mType string, value *float64, delt
 		}
 	} else if mType == `gauge` {
 		var v float64
-		if value == nil {
+
+		// Find `Value` value
+		if value != nil {
+			v = *value
+		} else if strValue != nil {
 			parsedValue, err := strconv.ParseFloat(*strValue, 64)
 			if err != nil {
-				return Metric{}, errCounter
+				return Metric{}, errGauge
 			}
 			v = parsedValue
 		} else {
-			v = *value
+			return Metric{}, errGauge
 		}
+
+		// Update gauge
 		u := a.storage.UpdateGaugeMetric(name, v)
 		updated = Metric{
 			ID:    name,
