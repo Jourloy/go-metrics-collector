@@ -190,7 +190,6 @@ func (a *AppSevice) GetMetricByParams(ctx *gin.Context) {
 		return
 	}
 
-	ctx.Header(`Content-Type`, `plain/text`)
 	if mType == `counter` {
 		ctx.String(http.StatusOK, `%d`, metric.Delta)
 	} else {
