@@ -99,8 +99,7 @@ func logger() gin.HandlerFunc {
 
 type responseBodyWriter struct {
 	gin.ResponseWriter
-	body     *bytes.Buffer
-	encoding string
+	body *bytes.Buffer
 }
 
 func (r responseBodyWriter) Write(b []byte) (int, error) {
@@ -142,7 +141,6 @@ func gzipMiddleware() gin.HandlerFunc {
 		// If client accepts gzip then compress the response
 		if c.Request.Header.Get(`Accept-Encoding`) == `gzip` {
 			rbw.ResponseWriter.Header().Set(`Content-Encoding`, `gzip`)
-			rbw.ResponseWriter.Header().Set(`Content-Type`, `application/json`)
 
 			originalBody := rbw.body.Bytes()
 			rbw.body.Reset()
