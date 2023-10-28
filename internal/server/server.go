@@ -1,10 +1,14 @@
 package server
 
 import (
+	"bytes"
+	"compress/gzip"
 	"flag"
+	"io"
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/Jourloy/go-metrics-collector/internal/server/handlers"
@@ -39,8 +43,9 @@ func Start() {
 	// Initiate handlers
 	r := gin.New()
 
-	// Set logger middleware
-	r.Use(logger())
+	// Set middlewares
+	r.Use(logger())         // Logger
+	r.Use(gzipMiddleware()) // Gzip
 
 	// Load HTML templates
 	r.LoadHTMLGlob("templates/*")
@@ -88,6 +93,70 @@ func logger() gin.HandlerFunc {
 				zap.String(`path`, path),
 				zap.Duration(`latency`, latency),
 			)
+		}
+	}
+}
+
+type responseBodyWriter struct {
+	gin.ResponseWriter
+	body     *bytes.Buffer
+	encoding string
+}
+
+func (r responseBodyWriter) Write(b []byte) (int, error) {
+	return r.body.Write(b)
+}
+
+func gzipMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		rbw := &responseBodyWriter{body: &bytes.Buffer{}, ResponseWriter: c.Writer}
+		c.Writer = rbw
+
+		// If content encoding is gzip, decompress the response body
+		if c.Request.Header.Get(`Content-Encoding`) == `gzip` {
+			b, err := io.ReadAll(c.Request.Body)
+			if err != nil {
+				c.Next()
+				return
+			}
+			defer c.Request.Body.Close()
+
+			r, err := gzip.NewReader(bytes.NewReader(b))
+			if err != nil {
+				c.Next()
+				return
+			}
+
+			b, err = io.ReadAll(r)
+			if err != nil {
+				c.Next()
+				return
+			}
+
+			c.Request.Body = io.NopCloser(strings.NewReader(string(b)))
+		}
+
+		// Perform request
+		c.Next()
+
+		// If client accepts gzip then compress the response
+		if c.Request.Header.Get(`Accept-Encoding`) == `gzip` {
+			rbw.ResponseWriter.Header().Set(`Content-Encoding`, `gzip`)
+			rbw.ResponseWriter.Header().Set(`Content-Type`, `application/json`)
+
+			originalBody := rbw.body.Bytes()
+			rbw.body.Reset()
+
+			var gz bytes.Buffer
+
+			w := gzip.NewWriter(&gz)
+			w.Write(originalBody)
+			w.Close()
+
+			rbw.ResponseWriter.Write(gz.Bytes())
+
+		} else {
+			rbw.ResponseWriter.Write(rbw.body.Bytes())
 		}
 	}
 }

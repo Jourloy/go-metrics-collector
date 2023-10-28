@@ -1,6 +1,8 @@
 package collector
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -9,7 +11,6 @@ import (
 	"os"
 	"runtime"
 	"strconv"
-	"strings"
 	"time"
 
 	"go.uber.org/zap"
@@ -183,10 +184,27 @@ func (c *Collector) sendMetrics() {
 // - None
 func (c *Collector) sendPOST(metric Metric) {
 	b, _ := json.Marshal(metric)
-	res, err := http.Post(`http://`+*ServerAddress+`/update`, `application/json`, strings.NewReader(string(b)))
+
+	var gz bytes.Buffer
+
+	w := gzip.NewWriter(&gz)
+	w.Write(b)
+	w.Close()
+
+	req, err := http.NewRequest(http.MethodPost, `http://`+*ServerAddress+`/update`, &gz)
 	if err != nil {
 		zap.L().Error(err.Error())
 		return
 	}
-	res.Body.Close()
+
+	req.Header.Set(`Content-Encoding`, `gzip`)
+	req.Header.Set(`Accept-Encoding`, `gzip`)
+	req.Header.Set(`Content-Type`, `application/json`)
+
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		zap.L().Error(err.Error())
+		return
+	}
+	defer res.Body.Close()
 }

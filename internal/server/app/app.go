@@ -93,9 +93,7 @@ func (a *AppSevice) UpdateMetricByParams(ctx *gin.Context) {
 		return
 	}
 
-	ctx.Header(`Content-Type`, `application/json`)
 	ctx.JSON(http.StatusOK, metric)
-
 }
 
 func (a *AppSevice) UpdateMetricByBody(ctx *gin.Context) {
@@ -113,7 +111,6 @@ func (a *AppSevice) UpdateMetricByBody(ctx *gin.Context) {
 		return
 	}
 
-	ctx.Header(`Content-Type`, `application/json`)
 	ctx.JSON(http.StatusOK, updated)
 }
 
