@@ -99,6 +99,15 @@ func CreateRepository() storage.Storage {
 		isSave = false
 	}
 
+	// Log created storage
+	zap.L().Debug(`MemStorage created`,
+		zap.String(`FileStoragePath`, *FileStoragePath),
+		zap.Int(`StoreInterval`, *StoreInterval),
+		zap.Bool(`SyncSave`, syncSave),
+		zap.Bool(`Restore`, *Restore),
+		zap.Bool(`IsSave`, isSave),
+	)
+
 	return &MemStorage{
 		gauge:   gauge,
 		counter: counter,
