@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"flag"
 	"os"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -50,6 +51,12 @@ type MemStorage struct {
 func CreateRepository() storage.Storage {
 	gauge := make(map[string]float64)
 	counter := make(map[string]int64)
+
+	// Check extension and if empty add .json
+	fileExt := filepath.Ext(*FileStoragePath)
+	if fileExt == `` {
+		*FileStoragePath += `.json`
+	}
 
 	zap.L().Debug(*FileStoragePath)
 
