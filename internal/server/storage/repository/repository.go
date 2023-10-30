@@ -51,8 +51,10 @@ func CreateRepository() storage.Storage {
 	gauge := make(map[string]float64)
 	counter := make(map[string]int64)
 
+	zap.L().Debug(*FileStoragePath)
+
 	// Open file
-	file, err := os.OpenFile(*FileStoragePath, os.O_RDONLY, 0666)
+	file, err := os.OpenFile(*FileStoragePath, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		zap.L().Error(err.Error())
 	}
