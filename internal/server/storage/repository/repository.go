@@ -1,12 +1,46 @@
 package repository
 
 import (
+	"encoding/json"
+	"flag"
+	"os"
+	"strconv"
+	"time"
+
 	"github.com/Jourloy/go-metrics-collector/internal/server/storage"
+	"go.uber.org/zap"
 )
+
+var (
+	StoreInterval   = flag.Int(`i`, 300, "Store interval in seconds")
+	FileStoragePath = flag.String(`f`, `/tmp/metrics-db.json`, "File storage path")
+	Restore         = flag.Bool(`r`, true, "Restore from file")
+	isSave          = true
+	syncSave        = false
+)
+
+func init() {
+	if env, exist := os.LookupEnv(`STORE_INTERVAL`); exist {
+		if i, err := strconv.Atoi(env); err == nil {
+			StoreInterval = &i
+		}
+	}
+
+	if env, exist := os.LookupEnv(`FILE_STORAGE_PATH`); exist {
+		FileStoragePath = &env
+	}
+
+	if env, exist := os.LookupEnv(`RESTORE`); exist {
+		if b, err := strconv.ParseBool(env); err == nil {
+			Restore = &b
+		}
+	}
+}
 
 type MemStorage struct {
 	gauge   map[string]float64
 	counter map[string]int64
+	done    chan struct{}
 }
 
 // CreateRepository creates a new storage repository.
@@ -14,10 +48,93 @@ type MemStorage struct {
 // Reutrns:
 // - a pointer to a storage.Storage interface.
 func CreateRepository() storage.Storage {
-	return &MemStorage{
-		gauge:   make(map[string]float64),
-		counter: make(map[string]int64),
+	gauge := make(map[string]float64)
+	counter := make(map[string]int64)
+
+	file, err := os.OpenFile(*FileStoragePath, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		zap.L().Error(err.Error())
 	}
+	defer file.Close()
+
+	var data struct {
+		Gauge   map[string]float64
+		Counter map[string]int64
+	}
+
+	if *Restore && err == nil {
+		if err := json.NewDecoder(file).Decode(&data); err != nil {
+			zap.L().Error(err.Error())
+		}
+		gauge = data.Gauge
+		counter = data.Counter
+	}
+
+	if *StoreInterval == 0 {
+		syncSave = true
+	}
+
+	if *FileStoragePath == `` {
+		isSave = false
+	}
+
+	return &MemStorage{
+		gauge:   gauge,
+		counter: counter,
+		done:    make(chan struct{}),
+	}
+}
+
+func (r *MemStorage) StartTickers() {
+	saveTicker := time.NewTicker(time.Duration(*StoreInterval) * time.Second)
+
+	for {
+		select {
+		case <-r.done:
+			return
+		case <-saveTicker.C:
+			if !syncSave {
+				r.SaveMetricsOnDisk()
+			}
+		}
+	}
+}
+
+func (r *MemStorage) StopTickers() {
+	close(r.done)
+}
+
+func (r *MemStorage) SaveMetricsOnDisk() {
+	if !isSave {
+		return
+	}
+
+	if _, err := os.Stat(*FileStoragePath); os.IsNotExist(err) {
+		zap.L().Warn(`File doesn't exist`)
+	} else {
+		if err := os.Truncate(*FileStoragePath, 0); err != nil {
+			zap.L().Error(err.Error())
+			return
+		}
+	}
+
+	file, err := os.OpenFile(*FileStoragePath, os.O_RDWR|os.O_CREATE, 0666)
+	if err != nil {
+		zap.L().Error(err.Error())
+		return
+	}
+	defer file.Close()
+
+	data := make(map[string]any)
+	data["gauge"] = r.gauge
+	data["counter"] = r.counter
+
+	if err := json.NewEncoder(file).Encode(data); err != nil {
+		zap.L().Error(err.Error())
+		return
+	}
+
+	zap.L().Debug(`Metrics saved on disk`)
 }
 
 // GetValues returns the gauge and counter maps of the MemStorage.
@@ -66,6 +183,9 @@ func (r *MemStorage) GetGaugeValue(name string) (float64, bool) {
 // - the updated value of the gauge metric (float64).
 func (r *MemStorage) UpdateGaugeMetric(name string, value float64) float64 {
 	r.gauge[name] = value
+	if syncSave {
+		r.SaveMetricsOnDisk()
+	}
 	return r.gauge[name]
 }
 
@@ -79,5 +199,8 @@ func (r *MemStorage) UpdateGaugeMetric(name string, value float64) float64 {
 // - the updated value of the counter metric (int64)
 func (r *MemStorage) UpdateCounterMetric(name string, value int64) int64 {
 	r.counter[name] += value
+	if syncSave {
+		r.SaveMetricsOnDisk()
+	}
 	return r.counter[name]
 }
