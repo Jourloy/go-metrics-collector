@@ -46,7 +46,9 @@ type MemStorage struct {
 
 // CreateRepository creates a new storage repository.
 //
-// Reutrns:
+// No parameters.
+//
+// Returns:
 // - a pointer to a storage.Storage interface.
 func CreateRepository() storage.Storage {
 	gauge := make(map[string]float64)

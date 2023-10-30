@@ -67,17 +67,26 @@ func Start() {
 	}
 }
 
+// logger is a middleware function that logs the details of each incoming request.
+//
+// It takes a gin.Context as a parameter and returns a gin.HandlerFunc.
+// The gin.HandlerFunc is a function that handles the request and response flow.
+//
+// The function logs the following details:
+// - The HTTP method of the request.
+// - The status code of the response.
+// - The size of the response (if the method is GET).
+// - The path of the request.
+// - The latency of the request.
+//
+// Parameters:
+//   - ctx: the gin context.
+//
+// Returns:
+// - a gin.HandlerFunc
 func logger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		t := time.Now()
-
-		// Log body for debug purposes
-		body, _ := io.ReadAll(c.Request.Body)
-		c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
-		zap.L().Debug(
-			`Request body`,
-			zap.ByteString(`body`, body),
-		)
 
 		c.Next()
 
@@ -111,10 +120,23 @@ type responseBodyWriter struct {
 	body *bytes.Buffer
 }
 
+// Write writes the given byte slice to the response body.
+//
+// Parameters:
+//   - b: the byte slice to be written
+//
+// No return values.
 func (r responseBodyWriter) Write(b []byte) (int, error) {
 	return r.body.Write(b)
 }
 
+// gzipMiddleware is a middleware function that compresses and decompresses gzipped request and response bodies.
+//
+// Parameters:
+//   - ctx: the gin context.
+//
+// Returns:
+// - a gin.HandlerFunc
 func gzipMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		rbw := &responseBodyWriter{body: &bytes.Buffer{}, ResponseWriter: c.Writer}
@@ -143,6 +165,12 @@ func gzipMiddleware() gin.HandlerFunc {
 
 			c.Request.Body = io.NopCloser(strings.NewReader(string(b)))
 		}
+
+		// Log request body
+		zap.L().Debug(
+			`Request body`,
+			zap.ByteString(`body`, rbw.body.Bytes()),
+		)
 
 		// Perform request
 		c.Next()
