@@ -66,8 +66,12 @@ func CreateRepository() storage.Storage {
 		if err := json.NewDecoder(file).Decode(&data); err != nil {
 			zap.L().Error(err.Error())
 		}
-		gauge = data.Gauge
-		counter = data.Counter
+		if data.Gauge != nil {
+			gauge = data.Gauge
+		}
+		if data.Counter != nil {
+			counter = data.Counter
+		}
 	}
 
 	if *StoreInterval == 0 {

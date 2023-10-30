@@ -5,7 +5,6 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"math/rand"
 	"net/http"
 	"os"
@@ -76,9 +75,6 @@ func CreateCollector() *Collector {
 // No parameters.
 // No return values.
 func (c *Collector) StartTickers() {
-	zap.L().Debug(fmt.Sprintf(`Poll Interval: %d`, PollInterval))
-	zap.L().Debug(fmt.Sprintf(`Report Interval: %d`, ReportInterval))
-
 	// Start tickers
 	collectTicker := time.NewTicker(time.Duration(*PollInterval) * time.Second)
 	sendTicker := time.NewTicker(time.Duration(*ReportInterval) * time.Second)
