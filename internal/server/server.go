@@ -142,15 +142,15 @@ func gzipMiddleware() gin.HandlerFunc {
 		rbw := &responseBodyWriter{body: &bytes.Buffer{}, ResponseWriter: c.Writer}
 		c.Writer = rbw
 
+		b, err := io.ReadAll(c.Request.Body)
+		if err != nil {
+			c.Next()
+			return
+		}
+		defer c.Request.Body.Close()
+
 		// If content encoding is gzip, decompress the response body
 		if c.Request.Header.Get(`Content-Encoding`) == `gzip` {
-			b, err := io.ReadAll(c.Request.Body)
-			if err != nil {
-				c.Next()
-				return
-			}
-			defer c.Request.Body.Close()
-
 			r, err := gzip.NewReader(bytes.NewReader(b))
 			if err != nil {
 				c.Next()
@@ -162,15 +162,14 @@ func gzipMiddleware() gin.HandlerFunc {
 				c.Next()
 				return
 			}
-
-			c.Request.Body = io.NopCloser(strings.NewReader(string(b)))
 		}
 
+		// Set request body
+		c.Request.Body = io.NopCloser(strings.NewReader(string(b)))
+
 		// Log request body
-		zap.L().Debug(
-			`Request body`,
-			zap.ByteString(`body`, rbw.body.Bytes()),
-		)
+		zap.L().Debug(`Request body:`)
+		zap.L().Debug(string(b))
 
 		// Perform request
 		c.Next()
@@ -189,7 +188,6 @@ func gzipMiddleware() gin.HandlerFunc {
 			w.Close()
 
 			rbw.ResponseWriter.Write(gz.Bytes())
-
 		} else {
 			rbw.ResponseWriter.Write(rbw.body.Bytes())
 		}
