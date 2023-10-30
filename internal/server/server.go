@@ -39,6 +39,7 @@ func Start() {
 	flag.Parse()
 
 	s := repository.CreateRepository()
+	go s.StartTickers()
 
 	// Initiate handlers
 	r := gin.New()
