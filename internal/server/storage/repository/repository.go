@@ -58,25 +58,27 @@ func CreateRepository() storage.Storage {
 	if err != nil {
 		zap.L().Error(err.Error())
 	}
-	defer file.Close()
 
 	// If restore is true and file exist decode content
 	if *Restore && err == nil {
 		var data struct {
-			Gauge   map[string]float64
-			Counter map[string]int64
+			Gauge   *map[string]float64
+			Counter *map[string]int64
 		}
 
 		if err := json.NewDecoder(file).Decode(&data); err != nil {
 			zap.L().Error(err.Error())
 		}
 		if data.Gauge != nil {
-			gauge = data.Gauge
+			gauge = *data.Gauge
 		}
 		if data.Counter != nil {
-			counter = data.Counter
+			counter = *data.Counter
 		}
 	}
+
+	// Close file
+	file.Close()
 
 	// If StoreInterval is equal to 0, save syncronously
 	if *StoreInterval == 0 {
