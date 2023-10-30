@@ -44,6 +44,11 @@ func GetAppSevice(s storage.Storage) *AppSevice {
 }
 
 // GetAllMetrics retrieves all metrics from the storage and returns them in the HTML format.
+//
+// Parameters:
+//   - ctx: the gin context.
+//
+// No return values.
 func (a *AppSevice) GetAllMetrics(ctx *gin.Context) {
 	gauge, counter := a.storage.GetValues()
 	merged := make(map[string]any, len(gauge)+len(counter))
@@ -61,10 +66,21 @@ func (a *AppSevice) GetAllMetrics(ctx *gin.Context) {
 }
 
 // Live returns the response "Live" with a status code of 200 OK.
+//
+// Parameters:
+//   - ctx: the gin context.
+//
+// No return values.
 func (a *AppSevice) Live(c *gin.Context) {
 	c.String(http.StatusOK, "Live")
 }
 
+// UpdateMetricByParams updates a metric by its parameters.
+//
+// Parameters:
+//   - ctx: the gin context.
+//
+// No return values.
 func (a *AppSevice) UpdateMetricByParams(ctx *gin.Context) {
 	name := ctx.Param(`name`)
 	mType := ctx.Param(`type`)
@@ -96,6 +112,12 @@ func (a *AppSevice) UpdateMetricByParams(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, metric)
 }
 
+// UpdateMetricByBody updates a metric by parsing the request body.
+//
+// Parameters:
+//   - ctx: the gin context.
+//
+// No return values.
 func (a *AppSevice) UpdateMetricByBody(ctx *gin.Context) {
 	// Check body
 	metric, err := a.parseBody(ctx)
@@ -114,6 +136,18 @@ func (a *AppSevice) UpdateMetricByBody(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, updated)
 }
 
+// updateMetric updates a metric based on the provided parameters.
+//
+// Parameters:
+// - name: the name of the metric.
+// - mType: the type of the metric.
+// - value: the value of the metric (optional).
+// - delta: the delta value of the metric (optional).
+// - strValue: the string value of the metric (optional).
+//
+// Returns:
+// - Metric: the updated metric.
+// - error: an error if the metric update fails.
 func (a *AppSevice) updateMetric(name string, mType string, value *float64, delta *int64, strValue *string) (Metric, error) {
 	var updated Metric
 	if mType == `counter` {
@@ -170,6 +204,11 @@ func (a *AppSevice) updateMetric(name string, mType string, value *float64, delt
 }
 
 // ShowValue handles the request to show a metric value.
+//
+// Parameters:
+//   - ctx: the gin context.
+//
+// No return values.
 func (a *AppSevice) GetMetricByParams(ctx *gin.Context) {
 	name := ctx.Param(`name`)
 	mType := ctx.Param(`type`)
@@ -205,6 +244,12 @@ func (a *AppSevice) GetMetricByParams(ctx *gin.Context) {
 	}
 }
 
+// GetMetricByBody retrieves a metric based on the request body.
+//
+// Parameters:
+//   - ctx: the gin context.
+//
+// No return values.
 func (a *AppSevice) GetMetricByBody(ctx *gin.Context) {
 	// Check body
 	template, err := a.parseBody(ctx)
@@ -246,6 +291,14 @@ func (a *AppSevice) GetMetricByBody(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, metric)
 }
 
+// parseBody parses the request body and returns a Metric object and an error.
+//
+// Parameters:
+//   - ctx: the gin context.
+//
+// Returns:
+//   - Metric: the parsed Metric object.
+//   - error: an error if the parsing fails.
 func (a *AppSevice) parseBody(ctx *gin.Context) (Metric, error) {
 	// Check body
 	if ctx.Request.Body == nil {

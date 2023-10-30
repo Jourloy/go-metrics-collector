@@ -51,18 +51,20 @@ func CreateRepository() storage.Storage {
 	gauge := make(map[string]float64)
 	counter := make(map[string]int64)
 
-	file, err := os.OpenFile(*FileStoragePath, os.O_RDWR|os.O_CREATE, 0666)
+	// Open file
+	file, err := os.OpenFile(*FileStoragePath, os.O_RDONLY, 0666)
 	if err != nil {
 		zap.L().Error(err.Error())
 	}
 	defer file.Close()
 
-	var data struct {
-		Gauge   map[string]float64
-		Counter map[string]int64
-	}
-
+	// If restore is true and file exist decode content
 	if *Restore && err == nil {
+		var data struct {
+			Gauge   map[string]float64
+			Counter map[string]int64
+		}
+
 		if err := json.NewDecoder(file).Decode(&data); err != nil {
 			zap.L().Error(err.Error())
 		}
@@ -74,10 +76,12 @@ func CreateRepository() storage.Storage {
 		}
 	}
 
+	// If StoreInterval is equal to 0, save syncronously
 	if *StoreInterval == 0 {
 		syncSave = true
 	}
 
+	// If storage path is empty, don't save
 	if *FileStoragePath == `` {
 		isSave = false
 	}
@@ -89,6 +93,10 @@ func CreateRepository() storage.Storage {
 	}
 }
 
+// StartTickers starts the tickers for the MemStorage.
+//
+// No parameters.
+// No return values.
 func (r *MemStorage) StartTickers() {
 	saveTicker := time.NewTicker(time.Duration(*StoreInterval) * time.Second)
 
@@ -104,10 +112,18 @@ func (r *MemStorage) StartTickers() {
 	}
 }
 
+// StopTickers stops the tickers in the MemStorage.
+//
+// No parameters.
+// No return types.
 func (r *MemStorage) StopTickers() {
 	close(r.done)
 }
 
+// SaveMetricsOnDisk saves the metrics in memory to a file on disk.
+//
+// No parameters.
+// No return types.
 func (r *MemStorage) SaveMetricsOnDisk() {
 	if !isSave {
 		return

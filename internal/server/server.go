@@ -70,6 +70,15 @@ func Start() {
 func logger() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		t := time.Now()
+
+		// Log body for debug purposes
+		body, _ := io.ReadAll(c.Request.Body)
+		c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
+		zap.L().Debug(
+			`Request body`,
+			zap.ByteString(`body`, body),
+		)
+
 		c.Next()
 
 		latency := time.Since(t)
