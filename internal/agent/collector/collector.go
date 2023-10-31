@@ -75,7 +75,10 @@ func CreateCollector() *Collector {
 func (c *Collector) StartTickers() {
 	// Start tickers
 	collectTicker := time.NewTicker(time.Duration(*PollInterval) * time.Second)
+	defer collectTicker.Stop()
+
 	sendTicker := time.NewTicker(time.Duration(*ReportInterval) * time.Second)
+	defer sendTicker.Stop()
 
 	zap.L().Info(`Collector's tickers started`)
 

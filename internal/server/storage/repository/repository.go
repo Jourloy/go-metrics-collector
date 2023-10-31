@@ -121,6 +121,7 @@ func CreateRepository() storage.Storage {
 // StartTickers starts the tickers for the MemStorage.
 func (r *MemStorage) StartTickers() {
 	saveTicker := time.NewTicker(time.Duration(*StoreInterval) * time.Second)
+	defer saveTicker.Stop()
 
 	for {
 		select {
