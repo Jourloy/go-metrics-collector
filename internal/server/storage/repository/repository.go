@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/Jourloy/go-metrics-collector/internal/server/storage"
@@ -38,12 +39,23 @@ func envParse() {
 			Restore = &b
 		}
 	}
+
+	// If StoreInterval is equal to 0, save syncronously
+	if *StoreInterval == 0 {
+		syncSave = true
+	}
+
+	// If storage path is empty, don't save
+	if *FileStoragePath == `` {
+		isSave = false
+	}
 }
 
 type MemStorage struct {
+	done chan struct{}
+	sync.Mutex
 	gauge   map[string]float64
 	counter map[string]int64
-	done    chan struct{}
 }
 
 // CreateRepository creates a new storage repository.
@@ -92,16 +104,6 @@ func CreateRepository() storage.Storage {
 	// Close file
 	file.Close()
 
-	// If StoreInterval is equal to 0, save syncronously
-	if *StoreInterval == 0 {
-		syncSave = true
-	}
-
-	// If storage path is empty, don't save
-	if *FileStoragePath == `` {
-		isSave = false
-	}
-
 	// Log created storage
 	zap.L().Debug(`MemStorage created`,
 		zap.String(`FileStoragePath`, *FileStoragePath),
@@ -120,6 +122,10 @@ func CreateRepository() storage.Storage {
 
 // StartTickers starts the tickers for the MemStorage.
 func (r *MemStorage) StartTickers() {
+	if syncSave {
+		return
+	}
+
 	saveTicker := time.NewTicker(time.Duration(*StoreInterval) * time.Second)
 	defer saveTicker.Stop()
 
@@ -162,6 +168,9 @@ func (r *MemStorage) SaveMetricsOnDisk() {
 	}
 	defer file.Close()
 
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+
 	data := make(map[string]any)
 	data["gauge"] = r.gauge
 	data["counter"] = r.counter
@@ -180,6 +189,9 @@ func (r *MemStorage) SaveMetricsOnDisk() {
 // - map[string]float64
 // - map[string]int64.
 func (r *MemStorage) GetValues() (map[string]float64, map[string]int64) {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+
 	return r.gauge, r.counter
 }
 
@@ -192,6 +204,9 @@ func (r *MemStorage) GetValues() (map[string]float64, map[string]int64) {
 // - int64: the value of the counter.
 // - bool: true if the counter exists, false otherwise.
 func (r *MemStorage) GetCounterValue(name string) (int64, bool) {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+
 	value, ok := r.counter[name]
 	return value, ok
 }
@@ -205,6 +220,9 @@ func (r *MemStorage) GetCounterValue(name string) (int64, bool) {
 // - value: a float64 representing the value of the gauge.
 // - ok: a boolean indicating whether the gauge was found.
 func (r *MemStorage) GetGaugeValue(name string) (float64, bool) {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+
 	value, ok := r.gauge[name]
 	return value, ok
 }
@@ -218,10 +236,16 @@ func (r *MemStorage) GetGaugeValue(name string) (float64, bool) {
 // Returns:
 // - the updated value of the gauge metric (float64).
 func (r *MemStorage) UpdateGaugeMetric(name string, value float64) float64 {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+
 	r.gauge[name] = value
+
+	// Save metrics on disk if syncSave is true
 	if syncSave {
-		r.SaveMetricsOnDisk()
+		go r.SaveMetricsOnDisk()
 	}
+
 	return r.gauge[name]
 }
 
@@ -234,9 +258,15 @@ func (r *MemStorage) UpdateGaugeMetric(name string, value float64) float64 {
 // Returns:
 // - the updated value of the counter metric (int64)
 func (r *MemStorage) UpdateCounterMetric(name string, value int64) int64 {
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
+
 	r.counter[name] += value
+
+	// Save metrics on disk if syncSave is true
 	if syncSave {
-		r.SaveMetricsOnDisk()
+		go r.SaveMetricsOnDisk()
 	}
+
 	return r.counter[name]
 }

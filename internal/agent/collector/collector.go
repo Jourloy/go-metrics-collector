@@ -22,9 +22,9 @@ var (
 )
 
 type Collector struct {
+	done    chan struct{}
 	gauge   map[string]float64
 	counter map[string]int64
-	done    chan struct{}
 }
 
 type Metric struct {
