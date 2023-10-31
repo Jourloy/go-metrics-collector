@@ -36,9 +36,6 @@ type Metric struct {
 
 // init initializes the ServerAddress, PollInterval, and ReportInterval
 // variables by checking for corresponding environment variables.
-//
-// No parameters.
-// No return values.
 func init() {
 	if hostENV, exist := os.LookupEnv(`ADDRESS`); exist {
 		ServerAddress = &hostENV
@@ -59,7 +56,6 @@ func init() {
 
 // CreateCollector creates a new instance of the Collector struct.
 //
-// No parameters.
 // Returns:
 // - a pointer to a Collector.
 func CreateCollector() *Collector {
@@ -71,9 +67,6 @@ func CreateCollector() *Collector {
 }
 
 // StartTickers starts the tickers for collecting and sending metrics in the Collector struct.
-//
-// No parameters.
-// No return values.
 func (c *Collector) StartTickers() {
 	// Start tickers
 	collectTicker := time.NewTicker(time.Duration(*PollInterval) * time.Second)
@@ -94,18 +87,12 @@ func (c *Collector) StartTickers() {
 }
 
 // StopTickers stops the tickers of the Collector.
-//
-// No parameters.
-// No return values.
 func (c *Collector) StopTickers() {
 	zap.L().Info(`Collector's tickers stopped`)
 	close(c.done)
 }
 
 // collectMetric collects various metrics and stores them in the gauge and counter maps.
-//
-// No parameters.
-// No return values.
 func (c *Collector) collectMetric() {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
@@ -145,9 +132,6 @@ func (c *Collector) collectMetric() {
 }
 
 // sendMetrics sends the metrics to the server.
-//
-// No parameters.
-// No return values..
 func (c *Collector) sendMetrics() {
 	for name, value := range c.gauge {
 		c.sendPOST(Metric{
@@ -175,9 +159,6 @@ func (c *Collector) sendMetrics() {
 //
 // Parameters:
 // - metric: the metric to be sent
-//
-// Returns:
-// - None
 func (c *Collector) sendPOST(metric Metric) {
 	b, _ := json.Marshal(metric)
 

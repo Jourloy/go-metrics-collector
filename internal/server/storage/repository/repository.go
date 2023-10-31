@@ -46,8 +46,6 @@ type MemStorage struct {
 
 // CreateRepository creates a new storage repository.
 //
-// No parameters.
-//
 // Returns:
 // - a pointer to a storage.Storage interface.
 func CreateRepository() storage.Storage {
@@ -116,9 +114,6 @@ func CreateRepository() storage.Storage {
 }
 
 // StartTickers starts the tickers for the MemStorage.
-//
-// No parameters.
-// No return values.
 func (r *MemStorage) StartTickers() {
 	saveTicker := time.NewTicker(time.Duration(*StoreInterval) * time.Second)
 
@@ -135,17 +130,11 @@ func (r *MemStorage) StartTickers() {
 }
 
 // StopTickers stops the tickers in the MemStorage.
-//
-// No parameters.
-// No return types.
 func (r *MemStorage) StopTickers() {
 	close(r.done)
 }
 
 // SaveMetricsOnDisk saves the metrics in memory to a file on disk.
-//
-// No parameters.
-// No return types.
 func (r *MemStorage) SaveMetricsOnDisk() {
 	if !isSave {
 		return
@@ -181,7 +170,6 @@ func (r *MemStorage) SaveMetricsOnDisk() {
 
 // GetValues returns the gauge and counter maps of the MemStorage.
 //
-// No parameters.
 // Returns:
 // - map[string]float64
 // - map[string]int64.

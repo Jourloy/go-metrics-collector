@@ -125,8 +125,6 @@ type responseBodyWriter struct {
 //
 // Parameters:
 //   - b: the byte slice to be written
-//
-// No return values.
 func (r responseBodyWriter) Write(b []byte) (int, error) {
 	return r.body.Write(b)
 }

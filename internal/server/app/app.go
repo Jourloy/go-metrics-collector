@@ -47,8 +47,6 @@ func GetAppSevice(s storage.Storage) *AppSevice {
 //
 // Parameters:
 //   - ctx: the gin context.
-//
-// No return values.
 func (a *AppSevice) GetAllMetrics(ctx *gin.Context) {
 	gauge, counter := a.storage.GetValues()
 	merged := make(map[string]any, len(gauge)+len(counter))
@@ -69,8 +67,6 @@ func (a *AppSevice) GetAllMetrics(ctx *gin.Context) {
 //
 // Parameters:
 //   - ctx: the gin context.
-//
-// No return values.
 func (a *AppSevice) Live(c *gin.Context) {
 	c.String(http.StatusOK, "Live")
 }
@@ -79,8 +75,6 @@ func (a *AppSevice) Live(c *gin.Context) {
 //
 // Parameters:
 //   - ctx: the gin context.
-//
-// No return values.
 func (a *AppSevice) UpdateMetricByParams(ctx *gin.Context) {
 	name := ctx.Param(`name`)
 	mType := ctx.Param(`type`)
@@ -116,8 +110,6 @@ func (a *AppSevice) UpdateMetricByParams(ctx *gin.Context) {
 //
 // Parameters:
 //   - ctx: the gin context.
-//
-// No return values.
 func (a *AppSevice) UpdateMetricByBody(ctx *gin.Context) {
 	// Check body
 	metric, err := a.parseBody(ctx)
@@ -207,8 +199,6 @@ func (a *AppSevice) updateMetric(name string, mType string, value *float64, delt
 //
 // Parameters:
 //   - ctx: the gin context.
-//
-// No return values.
 func (a *AppSevice) GetMetricByParams(ctx *gin.Context) {
 	name := ctx.Param(`name`)
 	mType := ctx.Param(`type`)
@@ -248,8 +238,6 @@ func (a *AppSevice) GetMetricByParams(ctx *gin.Context) {
 //
 // Parameters:
 //   - ctx: the gin context.
-//
-// No return values.
 func (a *AppSevice) GetMetricByBody(ctx *gin.Context) {
 	// Check body
 	template, err := a.parseBody(ctx)
