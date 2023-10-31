@@ -20,7 +20,9 @@ var (
 	syncSave        = false
 )
 
-func init() {
+// envParse initializes the StoreInterval, FileStoragePath, and Restore
+// variables by checking for corresponding environment variables.
+func envParse() {
 	if env, exist := os.LookupEnv(`STORE_INTERVAL`); exist {
 		if i, err := strconv.Atoi(env); err == nil {
 			StoreInterval = &i
@@ -49,6 +51,9 @@ type MemStorage struct {
 // Returns:
 // - a pointer to a storage.Storage interface.
 func CreateRepository() storage.Storage {
+	// Parse environment variables
+	envParse()
+
 	gauge := make(map[string]float64)
 	counter := make(map[string]int64)
 
@@ -129,8 +134,8 @@ func (r *MemStorage) StartTickers() {
 	}
 }
 
-// StopTickers stops the tickers in the MemStorage.
-func (r *MemStorage) StopTickers() {
+// CloseChannel close channel and as a result stops the tickers of the MemStorage.
+func (r *MemStorage) CloseChannel() {
 	close(r.done)
 }
 

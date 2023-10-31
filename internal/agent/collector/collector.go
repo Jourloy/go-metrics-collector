@@ -34,9 +34,9 @@ type Metric struct {
 	Value *float64 `json:"value,omitempty"` // Value if metric is a gauge
 }
 
-// init initializes the ServerAddress, PollInterval, and ReportInterval
+// envParse initializes the ServerAddress, PollInterval, and ReportInterval
 // variables by checking for corresponding environment variables.
-func init() {
+func envParse() {
 	if hostENV, exist := os.LookupEnv(`ADDRESS`); exist {
 		ServerAddress = &hostENV
 	}
@@ -52,6 +52,8 @@ func init() {
 			ReportInterval = &i
 		}
 	}
+
+	zap.L().Debug(`Collector initialized`)
 }
 
 // CreateCollector creates a new instance of the Collector struct.
@@ -59,6 +61,9 @@ func init() {
 // Returns:
 // - a pointer to a Collector.
 func CreateCollector() *Collector {
+	// Parse environment variables
+	envParse()
+
 	return &Collector{
 		gauge:   make(map[string]float64),
 		counter: make(map[string]int64),
@@ -86,8 +91,8 @@ func (c *Collector) StartTickers() {
 	}
 }
 
-// StopTickers stops the tickers of the Collector.
-func (c *Collector) StopTickers() {
+// CloseChannel close channel and as a result stops the tickers of the Collector.
+func (c *Collector) CloseChannel() {
 	zap.L().Info(`Collector's tickers stopped`)
 	close(c.done)
 }
