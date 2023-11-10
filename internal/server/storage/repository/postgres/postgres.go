@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	PostgresDSN = flag.String(`d`, `postgres://user:password@postgres/metrics`, `Postgres DSN`)
+	PostgresDSN = flag.String(`d`, ``, `Postgres DSN`)
 )
 
 var schema = `

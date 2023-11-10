@@ -14,9 +14,9 @@ import (
 )
 
 var (
-	StoreInterval   = flag.Int(`i`, 300, "Store interval in seconds")
-	FileStoragePath = flag.String(`f`, `/tmp/metrics-db.json`, "File storage path")
-	Restore         = flag.Bool(`r`, true, "Restore from file")
+	StoreInterval   = flag.Int(`i`, 300, `Store interval in seconds`)
+	FileStoragePath = flag.String(`f`, `/tmp/metrics-db.json`, `File storage path`)
+	Restore         = flag.Bool(`r`, true, `Restore from file`)
 	isSave          = true
 	syncSave        = false
 )
