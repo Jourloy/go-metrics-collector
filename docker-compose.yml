@@ -1,0 +1,41 @@
+version: '3.8'
+
+name: metric
+services:
+    postgres:
+        container_name: metric-postgres
+        image: postgres:latest
+        environment:
+            POSTGRES_DB: "${POSTGRES_DB}"
+            POSTGRES_USER: "${POSTGRES_USER}"
+            POSTGRES_PASSWORD: "${POSTGRES_PASSWORD}"
+        ports:
+            - "5432:5432"
+
+    server:
+        container_name: metric-server
+        build:
+            context: .
+        volumes:
+            - .:/app
+        command: go run ./cmd/server -f=""
+        env_file:
+            - .env.server
+        ports:
+            - "8080:8080"
+        restart: always
+        depends_on:
+            - postgres
+
+    agent:
+        container_name: metric-agent
+        build:
+            context: .
+        volumes:
+            - .:/app
+        command: go run ./cmd/agent -a server:8080
+        env_file:
+            - .env.agent
+        restart: always
+        depends_on:
+            - postgres

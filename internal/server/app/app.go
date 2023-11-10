@@ -67,8 +67,8 @@ func (a *AppSevice) GetAllMetrics(ctx *gin.Context) {
 //
 // Parameters:
 //   - ctx: the gin context.
-func (a *AppSevice) Live(c *gin.Context) {
-	c.String(http.StatusOK, "Live")
+func (a *AppSevice) Pong(c *gin.Context) {
+	c.String(http.StatusOK, `Pong`)
 }
 
 // UpdateMetricByParams updates a metric by its parameters.

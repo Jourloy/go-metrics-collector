@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/Jourloy/go-metrics-collector/internal/server/storage/repository"
+	"github.com/Jourloy/go-metrics-collector/internal/server/storage/repository/memory"
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
@@ -162,7 +162,7 @@ func TestAppBodyHandlers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r := gin.Default()
 			g := r.Group(`/`)
-			s := repository.CreateRepository()
+			s := memory.CreateRepository()
 
 			RegisterAppHandler(g, s)
 
@@ -259,7 +259,7 @@ func TestAppParamsHandlers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r := gin.Default()
 			g := r.Group(`/`)
-			s := repository.CreateRepository()
+			s := memory.CreateRepository()
 
 			RegisterAppHandler(g, s)
 

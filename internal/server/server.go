@@ -12,14 +12,14 @@ import (
 	"time"
 
 	"github.com/Jourloy/go-metrics-collector/internal/server/handlers"
-	"github.com/Jourloy/go-metrics-collector/internal/server/storage/repository"
+	"github.com/Jourloy/go-metrics-collector/internal/server/storage/repository/memory"
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 )
 
 var (
-	Host = flag.String("a", `localhost:8080`, "Host of the server")
+	Host = flag.String(`a`, `localhost:8080`, `Host of the server`)
 )
 
 // Initialize the application.
@@ -32,13 +32,13 @@ func init() {
 // Start initiates the application.
 func Start() {
 	// Check if ADDRESS environment variable is set and assign it to Host
-	if hostENV, exist := os.LookupEnv("ADDRESS"); exist {
+	if hostENV, exist := os.LookupEnv(`ADDRESS`); exist {
 		Host = &hostENV
 	}
 
 	flag.Parse()
 
-	s := repository.CreateRepository()
+	s := memory.CreateRepository()
 	go s.StartTickers()
 
 	// Initiate handlers
@@ -49,7 +49,7 @@ func Start() {
 	r.Use(gzipMiddleware()) // Gzip
 
 	// Load HTML templates
-	r.LoadHTMLGlob("templates/*")
+	r.LoadHTMLGlob(`templates/*`)
 
 	// Initiate router groups
 	appGroup := r.Group(`/`)
@@ -61,7 +61,7 @@ func Start() {
 	if err := r.Run(*Host); err != nil {
 		// Handle server closed error
 		if err == http.ErrServerClosed {
-			zap.L().Info("Server closed")
+			zap.L().Info(`Server closed`)
 		} else {
 			panic(err)
 		}

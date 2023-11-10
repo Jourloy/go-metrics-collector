@@ -21,5 +21,4 @@ type Storage interface {
 
 	StartTickers()
 	// CloseChannel close channel and as a result stops the tickers of the MemStorage.
-	CloseChannel()
 }

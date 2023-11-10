@@ -10,7 +10,7 @@ import (
 func RegisterAppHandler(g *gin.RouterGroup, s storage.Storage) {
 	appService := app.GetAppSevice(s)
 
-	g.GET(`/live`, appService.Live)
+	g.GET(`/ping`, appService.Pong)
 	g.GET(`/`, appService.GetAllMetrics)
 
 	// Below code looks ugly, but it is needed to make the handler work.

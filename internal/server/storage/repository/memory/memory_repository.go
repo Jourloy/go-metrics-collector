@@ -1,4 +1,4 @@
-package repository
+package memory
 
 import (
 	"encoding/json"
@@ -139,11 +139,6 @@ func (r *MemStorage) StartTickers() {
 			}
 		}
 	}
-}
-
-// CloseChannel close channel and as a result stops the tickers of the MemStorage.
-func (r *MemStorage) CloseChannel() {
-	close(r.done)
 }
 
 // SaveMetricsOnDisk saves the metrics in memory to a file on disk.
