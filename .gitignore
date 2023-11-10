@@ -27,4 +27,4 @@ vendor/
 # ENV
 .env.agent
 .env.server
-.env*
+.env
