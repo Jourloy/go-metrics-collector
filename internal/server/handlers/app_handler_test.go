@@ -36,7 +36,7 @@ func TestAppBodyHandlers(t *testing.T) {
 		{
 			name: `Negative #1 (Live not found)`,
 			args: args{
-				path:   `/live`,
+				path:   `/ping`,
 				method: http.MethodPost,
 			},
 			wantCode:    404,
@@ -115,11 +115,11 @@ func TestAppBodyHandlers(t *testing.T) {
 		{
 			name: `Positive #1 (Live success)`,
 			args: args{
-				path:   `/live`,
+				path:   `/ping`,
 				method: http.MethodGet,
 			},
 			wantCode:    200,
-			wantErrBody: `Live`,
+			wantErrBody: `Pong`,
 		},
 		{
 			name: `Positive #2 (Metric counter success)`,
