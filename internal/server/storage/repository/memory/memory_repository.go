@@ -14,8 +14,8 @@ import (
 var (
 	StoreInterval   = 0
 	FileStoragePath = ``
-	isSave          = true
-	syncSave        = false
+	IsSave          = true
+	SyncSave        = false
 )
 
 type Options struct {
@@ -48,13 +48,12 @@ func CreateRepository(opt Options) storage.Storage {
 		*opt.FileStoragePath += `.json`
 	}
 
-	zap.L().Debug(*opt.FileStoragePath)
-
 	// Open file
 	file, err := os.OpenFile(*opt.FileStoragePath, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		zap.L().Error(err.Error())
 	}
+	defer file.Close()
 
 	// If restore is true and file exist decode content
 	if *opt.Restore && err == nil {
@@ -63,9 +62,8 @@ func CreateRepository(opt Options) storage.Storage {
 			Counter *map[string]int64
 		}
 
-		if err := json.NewDecoder(file).Decode(&data); err != nil {
-			zap.L().Error(err.Error())
-		}
+		json.NewDecoder(file).Decode(&data)
+
 		if data.Gauge != nil {
 			gauge = *data.Gauge
 		}
@@ -74,17 +72,14 @@ func CreateRepository(opt Options) storage.Storage {
 		}
 	}
 
-	// Close file
-	file.Close()
-
 	// If StoreInterval is equal to 0, save syncronously
 	if *opt.StoreInterval == 0 {
-		syncSave = true
+		SyncSave = true
 	}
 
 	// If storage path is empty, don't save
 	if *opt.FileStoragePath == `` {
-		isSave = false
+		IsSave = false
 	}
 
 	return &MemStorage{
@@ -96,9 +91,15 @@ func CreateRepository(opt Options) storage.Storage {
 
 // StartTickers starts the tickers for the MemStorage.
 func (r *MemStorage) StartTickers() {
-	if syncSave {
+	if SyncSave {
 		return
 	}
+
+	zap.L().Info(
+		`MemStorage's tickers started`,
+		zap.Int(`StoreInterval`, StoreInterval),
+		zap.Bool(`Sync`, SyncSave),
+	)
 
 	saveTicker := time.NewTicker(time.Duration(StoreInterval) * time.Second)
 	defer saveTicker.Stop()
@@ -108,7 +109,7 @@ func (r *MemStorage) StartTickers() {
 		case <-r.done:
 			return
 		case <-saveTicker.C:
-			if !syncSave {
+			if !SyncSave {
 				r.SaveMetricsOnDisk()
 			}
 		}
@@ -117,7 +118,7 @@ func (r *MemStorage) StartTickers() {
 
 // SaveMetricsOnDisk saves the metrics in memory to a file on disk.
 func (r *MemStorage) SaveMetricsOnDisk() {
-	if !isSave {
+	if !IsSave {
 		return
 	}
 
@@ -141,8 +142,8 @@ func (r *MemStorage) SaveMetricsOnDisk() {
 	defer r.Mutex.Unlock()
 
 	data := make(map[string]any)
-	data["gauge"] = r.gauge
-	data["counter"] = r.counter
+	data[`gauge`] = r.gauge
+	data[`counter`] = r.counter
 
 	if err := json.NewEncoder(file).Encode(data); err != nil {
 		zap.L().Error(err.Error())
@@ -210,8 +211,8 @@ func (r *MemStorage) UpdateGaugeMetric(name string, value float64) float64 {
 
 	r.gauge[name] = value
 
-	// Save metrics on disk if syncSave is true
-	if syncSave {
+	// Save metrics on disk if SyncSave is true
+	if SyncSave {
 		go r.SaveMetricsOnDisk()
 	}
 
@@ -232,8 +233,8 @@ func (r *MemStorage) UpdateCounterMetric(name string, value int64) int64 {
 
 	r.counter[name] += value
 
-	// Save metrics on disk if syncSave is true
-	if syncSave {
+	// Save metrics on disk if SyncSave is true
+	if SyncSave {
 		go r.SaveMetricsOnDisk()
 	}
 
