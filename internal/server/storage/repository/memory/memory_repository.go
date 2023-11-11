@@ -51,7 +51,7 @@ func CreateRepository(opt Options) storage.Storage {
 	// Open file
 	file, err := os.OpenFile(*opt.FileStoragePath, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
-		zap.L().Error(err.Error())
+		zap.L().Error(`File open error`, zap.Error(err))
 	}
 	defer file.Close()
 
@@ -62,13 +62,32 @@ func CreateRepository(opt Options) storage.Storage {
 			Counter *map[string]int64
 		}
 
-		json.NewDecoder(file).Decode(&data)
+		err := json.NewDecoder(file).Decode(&data)
+		if err != nil {
+			data := make(map[string]any)
+			data[`gauge`] = []string{}
+			data[`counter`] = []string{}
+
+			if err := json.NewEncoder(file).Encode(data); err != nil {
+				zap.L().Error(`File encode error`, zap.Error(err))
+			}
+
+			zap.L().Error(`File decode error`, zap.Error(err))
+		}
 
 		if data.Gauge != nil {
 			gauge = *data.Gauge
 		}
 		if data.Counter != nil {
 			counter = *data.Counter
+		}
+
+		if len(gauge) > 0 || len(counter) > 0 {
+			zap.L().Info(
+				`MemStorage restored`,
+				zap.Int(`Gauge`, len(gauge)),
+				zap.Int(`Counter`, len(counter)),
+			)
 		}
 	}
 
@@ -102,7 +121,6 @@ func (r *MemStorage) StartTickers() {
 	)
 
 	saveTicker := time.NewTicker(time.Duration(StoreInterval) * time.Second)
-	defer saveTicker.Stop()
 
 	for {
 		select {
@@ -126,7 +144,7 @@ func (r *MemStorage) SaveMetricsOnDisk() {
 		zap.L().Warn(`File doesn't exist`)
 	} else {
 		if err := os.Truncate(FileStoragePath, 0); err != nil {
-			zap.L().Error(err.Error())
+			zap.L().Error(`File truncate error`, zap.Error(err))
 			return
 		}
 	}
@@ -146,7 +164,7 @@ func (r *MemStorage) SaveMetricsOnDisk() {
 	data[`counter`] = r.counter
 
 	if err := json.NewEncoder(file).Encode(data); err != nil {
-		zap.L().Error(err.Error())
+		zap.L().Error(`File encode error`, zap.Error(err))
 		return
 	}
 
