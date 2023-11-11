@@ -64,14 +64,6 @@ func CreateRepository(opt Options) storage.Storage {
 
 		err := json.NewDecoder(file).Decode(&data)
 		if err != nil {
-			data := make(map[string]any)
-			data[`gauge`] = []string{}
-			data[`counter`] = []string{}
-
-			if err := json.NewEncoder(file).Encode(data); err != nil {
-				zap.L().Error(`File encode error`, zap.Error(err))
-			}
-
 			zap.L().Error(`File decode error`, zap.Error(err))
 		}
 
@@ -121,6 +113,7 @@ func (r *MemStorage) StartTickers() {
 	)
 
 	saveTicker := time.NewTicker(time.Duration(StoreInterval) * time.Second)
+	defer saveTicker.Stop()
 
 	for {
 		select {
