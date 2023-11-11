@@ -2,6 +2,12 @@
 
 ## Changelog
 
+### Iteration 10
+
+It this iteration I should add 500 error return if database is not connected.
+
+`gin.recovery()` usually used for catch panic and return 500 instead. But I can't use it, because initialize is not handler of gin. So, I add custom check. I think it's not best pracite case, but I don't know any other solution.
+
 ### Iteration 7
 
 In this iteration I changed main logic of routes.

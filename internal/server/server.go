@@ -12,9 +12,8 @@ import (
 	"time"
 
 	"github.com/Jourloy/go-metrics-collector/internal/server/handlers"
-	"github.com/Jourloy/go-metrics-collector/internal/server/storage/repository/memory"
+	"github.com/Jourloy/go-metrics-collector/internal/server/storage/repository"
 	"github.com/gin-gonic/gin"
-	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 )
 
@@ -22,15 +21,15 @@ var (
 	Host = flag.String(`a`, `localhost:8080`, `Host of the server`)
 )
 
-// Initialize the application.
-func init() {
-	if err := godotenv.Load(`.env.server`); err != nil {
-		zap.L().Warn(`.env.server not found`)
-	}
-}
-
 // Start initiates the application.
 func Start() {
+	// Initiate handlers
+	r := gin.New()
+
+	// Set middlewares
+	r.Use(gin.Recovery())
+	r.Use(logger())         // Logger
+	r.Use(gzipMiddleware()) // Gzip
 	// Check if ADDRESS environment variable is set and assign it to Host
 	if hostENV, exist := os.LookupEnv(`ADDRESS`); exist {
 		Host = &hostENV
@@ -38,15 +37,8 @@ func Start() {
 
 	flag.Parse()
 
-	s := memory.CreateRepository()
+	s := repository.CreateRepository()
 	go s.StartTickers()
-
-	// Initiate handlers
-	r := gin.New()
-
-	// Set middlewares
-	r.Use(logger())         // Logger
-	r.Use(gzipMiddleware()) // Gzip
 
 	// Load HTML templates
 	r.LoadHTMLGlob(`templates/*`)

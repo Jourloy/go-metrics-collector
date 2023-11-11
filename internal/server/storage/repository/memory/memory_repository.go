@@ -2,10 +2,8 @@ package memory
 
 import (
 	"encoding/json"
-	"flag"
 	"os"
 	"path/filepath"
-	"strconv"
 	"sync"
 	"time"
 
@@ -14,41 +12,16 @@ import (
 )
 
 var (
-	StoreInterval   = flag.Int(`i`, 300, `Store interval in seconds`)
-	FileStoragePath = flag.String(`f`, `/tmp/metrics-db.json`, `File storage path`)
-	Restore         = flag.Bool(`r`, true, `Restore from file`)
+	StoreInterval   = 0
+	FileStoragePath = ``
 	isSave          = true
 	syncSave        = false
 )
 
-// envParse initializes the StoreInterval, FileStoragePath, and Restore
-// variables by checking for corresponding environment variables.
-func envParse() {
-	if env, exist := os.LookupEnv(`STORE_INTERVAL`); exist {
-		if i, err := strconv.Atoi(env); err == nil {
-			StoreInterval = &i
-		}
-	}
-
-	if env, exist := os.LookupEnv(`FILE_STORAGE_PATH`); exist {
-		FileStoragePath = &env
-	}
-
-	if env, exist := os.LookupEnv(`RESTORE`); exist {
-		if b, err := strconv.ParseBool(env); err == nil {
-			Restore = &b
-		}
-	}
-
-	// If StoreInterval is equal to 0, save syncronously
-	if *StoreInterval == 0 {
-		syncSave = true
-	}
-
-	// If storage path is empty, don't save
-	if *FileStoragePath == `` {
-		isSave = false
-	}
+type Options struct {
+	StoreInterval   *int
+	FileStoragePath *string
+	Restore         *bool
 }
 
 type MemStorage struct {
@@ -62,29 +35,29 @@ type MemStorage struct {
 //
 // Returns:
 // - a pointer to a storage.Storage interface.
-func CreateRepository() storage.Storage {
-	// Parse environment variables
-	envParse()
+func CreateRepository(opt Options) storage.Storage {
+	StoreInterval = *opt.StoreInterval
+	FileStoragePath = *opt.FileStoragePath
 
 	gauge := make(map[string]float64)
 	counter := make(map[string]int64)
 
 	// Check extension and if empty add .json
-	fileExt := filepath.Ext(*FileStoragePath)
+	fileExt := filepath.Ext(*opt.FileStoragePath)
 	if fileExt == `` {
-		*FileStoragePath += `.json`
+		*opt.FileStoragePath += `.json`
 	}
 
-	zap.L().Debug(*FileStoragePath)
+	zap.L().Debug(*opt.FileStoragePath)
 
 	// Open file
-	file, err := os.OpenFile(*FileStoragePath, os.O_RDWR|os.O_CREATE, 0666)
+	file, err := os.OpenFile(*opt.FileStoragePath, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		zap.L().Error(err.Error())
 	}
 
 	// If restore is true and file exist decode content
-	if *Restore && err == nil {
+	if *opt.Restore && err == nil {
 		var data struct {
 			Gauge   *map[string]float64
 			Counter *map[string]int64
@@ -104,14 +77,15 @@ func CreateRepository() storage.Storage {
 	// Close file
 	file.Close()
 
-	// Log created storage
-	zap.L().Debug(`MemStorage created`,
-		zap.String(`FileStoragePath`, *FileStoragePath),
-		zap.Int(`StoreInterval`, *StoreInterval),
-		zap.Bool(`SyncSave`, syncSave),
-		zap.Bool(`Restore`, *Restore),
-		zap.Bool(`IsSave`, isSave),
-	)
+	// If StoreInterval is equal to 0, save syncronously
+	if *opt.StoreInterval == 0 {
+		syncSave = true
+	}
+
+	// If storage path is empty, don't save
+	if *opt.FileStoragePath == `` {
+		isSave = false
+	}
 
 	return &MemStorage{
 		gauge:   gauge,
@@ -126,7 +100,7 @@ func (r *MemStorage) StartTickers() {
 		return
 	}
 
-	saveTicker := time.NewTicker(time.Duration(*StoreInterval) * time.Second)
+	saveTicker := time.NewTicker(time.Duration(StoreInterval) * time.Second)
 	defer saveTicker.Stop()
 
 	for {
@@ -147,16 +121,16 @@ func (r *MemStorage) SaveMetricsOnDisk() {
 		return
 	}
 
-	if _, err := os.Stat(*FileStoragePath); os.IsNotExist(err) {
+	if _, err := os.Stat(FileStoragePath); os.IsNotExist(err) {
 		zap.L().Warn(`File doesn't exist`)
 	} else {
-		if err := os.Truncate(*FileStoragePath, 0); err != nil {
+		if err := os.Truncate(FileStoragePath, 0); err != nil {
 			zap.L().Error(err.Error())
 			return
 		}
 	}
 
-	file, err := os.OpenFile(*FileStoragePath, os.O_RDWR|os.O_CREATE, 0666)
+	file, err := os.OpenFile(FileStoragePath, os.O_RDWR|os.O_CREATE, 0666)
 	if err != nil {
 		zap.L().Error(err.Error())
 		return

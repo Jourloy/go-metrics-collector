@@ -18,12 +18,11 @@ services:
             context: .
         volumes:
             - .:/app
-        command: go run ./cmd/server -f=""
+        command: go run ./cmd/server
         env_file:
             - .env.server
         ports:
             - "8080:8080"
-        restart: always
         depends_on:
             - postgres
 
@@ -36,6 +35,5 @@ services:
         command: go run ./cmd/agent -a server:8080
         env_file:
             - .env.agent
-        restart: always
         depends_on:
             - postgres

@@ -68,6 +68,10 @@ func (a *AppSevice) GetAllMetrics(ctx *gin.Context) {
 // Parameters:
 //   - ctx: the gin context.
 func (a *AppSevice) Pong(c *gin.Context) {
+	if !a.checkStorage(c) {
+		return
+	}
+
 	c.String(http.StatusOK, `Pong`)
 }
 
@@ -76,6 +80,10 @@ func (a *AppSevice) Pong(c *gin.Context) {
 // Parameters:
 //   - ctx: the gin context.
 func (a *AppSevice) UpdateMetricByParams(ctx *gin.Context) {
+	if !a.checkStorage(ctx) {
+		return
+	}
+
 	name := ctx.Param(`name`)
 	mType := ctx.Param(`type`)
 	value := ctx.Param(`value`)
@@ -111,6 +119,10 @@ func (a *AppSevice) UpdateMetricByParams(ctx *gin.Context) {
 // Parameters:
 //   - ctx: the gin context.
 func (a *AppSevice) UpdateMetricByBody(ctx *gin.Context) {
+	if !a.checkStorage(ctx) {
+		return
+	}
+
 	// Check body
 	metric, err := a.parseBody(ctx)
 	if err != nil {
@@ -200,6 +212,10 @@ func (a *AppSevice) updateMetric(name string, mType string, value *float64, delt
 // Parameters:
 //   - ctx: the gin context.
 func (a *AppSevice) GetMetricByParams(ctx *gin.Context) {
+	if !a.checkStorage(ctx) {
+		return
+	}
+
 	name := ctx.Param(`name`)
 	mType := ctx.Param(`type`)
 
@@ -239,6 +255,10 @@ func (a *AppSevice) GetMetricByParams(ctx *gin.Context) {
 // Parameters:
 //   - ctx: the gin context.
 func (a *AppSevice) GetMetricByBody(ctx *gin.Context) {
+	if !a.checkStorage(ctx) {
+		return
+	}
+
 	// Check body
 	template, err := a.parseBody(ctx)
 	if err != nil {
@@ -279,7 +299,24 @@ func (a *AppSevice) GetMetricByBody(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, metric)
 }
 
+// checkStorage checks if the storage is initialized.
+//
+// Parameter(s):
+//   - c: a gin.Context object
+//
+// Returns:
+//   - true if the storage is initialized, false otherwise.
+func (a *AppSevice) checkStorage(c *gin.Context) bool {
+	if a.storage == nil {
+		c.String(http.StatusInternalServerError, `Storage not initialized`)
+		return false
+	}
+	return true
+}
+
 // parseBody parses the request body and returns a Metric object and an error.
+//
+// # You can read changelog for more details
 //
 // Parameters:
 //   - ctx: the gin context.

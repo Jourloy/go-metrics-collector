@@ -1,16 +1,10 @@
 package postgres
 
 import (
-	"flag"
-	"os"
-
 	"github.com/Jourloy/go-metrics-collector/internal/server/storage"
 	"github.com/jmoiron/sqlx"
+	_ "github.com/lib/pq"
 	"go.uber.org/zap"
-)
-
-var (
-	PostgresDSN = flag.String(`d`, ``, `Postgres DSN`)
 )
 
 var schema = `
@@ -34,29 +28,23 @@ type CounterModel struct {
 	Value int64  `db:"value"`
 }
 
-// envParse initializes the StoreInterval, FileStoragePath, and Restore
-// variables by checking for corresponding environment variables.
-func envParse() {
-	if env, exist := os.LookupEnv(`DATABASE_DSN `); exist {
-		PostgresDSN = &env
-	}
-}
-
 type PostgresStorage struct {
 	db *sqlx.DB
+}
+
+type Options struct {
+	PostgresDSN *string
 }
 
 // CreateRepository creates a new storage repository.
 //
 // Returns:
 // - a pointer to a storage.Storage interface.
-func CreateRepository() storage.Storage {
-	// Parse environment variables
-	envParse()
-
-	db, err := sqlx.Connect(`postgres`, *PostgresDSN)
+func CreateRepository(opt Options) storage.Storage {
+	db, err := sqlx.Connect(`postgres`, *opt.PostgresDSN)
 	if err != nil {
 		zap.L().Error(err.Error())
+		return nil
 	}
 
 	db.MustExec(schema)

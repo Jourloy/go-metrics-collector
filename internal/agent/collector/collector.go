@@ -5,6 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"math/rand"
 	"net/http"
 	"os"
@@ -139,35 +140,67 @@ func (c *Collector) collectMetric() {
 	zap.L().Debug(`Metrics collected`)
 }
 
+type Statuses struct {
+	Success  int
+	Internal int
+	Fail     int
+}
+
 // sendMetrics sends the metrics to the server.
 func (c *Collector) sendMetrics() {
+	statuses := Statuses{}
+
 	for name, value := range c.gauge {
-		c.sendPOST(Metric{
+		status, err := c.sendPOST(Metric{
 			ID:    name,
 			MType: `gauge`,
 			Value: &value,
 		})
+		if err == nil && status != nil {
+			if *status == 200 {
+				statuses.Success++
+			} else if *status == 500 {
+				statuses.Internal++
+			} else {
+				statuses.Fail++
+			}
+		}
 	}
 
 	for name, value := range c.counter {
-		c.sendPOST(Metric{
+		status, err := c.sendPOST(Metric{
 			ID:    name,
 			MType: `counter`,
 			Delta: &value,
 		})
+		if err == nil && status != nil {
+			if *status == 200 {
+				statuses.Success++
+			} else if *status == 500 {
+				statuses.Internal++
+			} else {
+				statuses.Fail++
+			}
+		}
 	}
 
 	// Reset poll count
 	c.counter[`PollCount`] = 0
 
-	zap.L().Debug(`Metrics sent`)
+	// Log sent metrics
+	zap.L().Debug(
+		`Metrics sent to the server`,
+		zap.String(`Success`, fmt.Sprintf(`%d`, statuses.Success)),
+		zap.String(`Internal`, fmt.Sprintf(`%d`, statuses.Internal)),
+		zap.String(`Fail`, fmt.Sprintf(`%d`, statuses.Fail)),
+	)
 }
 
 // sendPOST sends a POST request to the server with the given metric.
 //
 // Parameters:
 // - metric: the metric to be sent
-func (c *Collector) sendPOST(metric Metric) {
+func (c *Collector) sendPOST(metric Metric) (*int, error) {
 	b, _ := json.Marshal(metric)
 
 	var gz bytes.Buffer
@@ -179,7 +212,7 @@ func (c *Collector) sendPOST(metric Metric) {
 	req, err := http.NewRequest(http.MethodPost, `http://`+*ServerAddress+`/update`, &gz)
 	if err != nil {
 		zap.L().Error(err.Error())
-		return
+		return nil, err
 	}
 
 	req.Header.Set(`Content-Encoding`, `gzip`)
@@ -189,7 +222,9 @@ func (c *Collector) sendPOST(metric Metric) {
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		zap.L().Error(err.Error())
-		return
+		return nil, err
 	}
 	defer res.Body.Close()
+
+	return &res.StatusCode, nil
 }
