@@ -37,7 +37,6 @@ type MemStorage struct {
 // - a pointer to a storage.Storage interface.
 func CreateRepository(opt Options) storage.Storage {
 	StoreInterval = *opt.StoreInterval
-	FileStoragePath = *opt.FileStoragePath
 
 	gauge := make(map[string]float64)
 	counter := make(map[string]int64)
@@ -47,6 +46,8 @@ func CreateRepository(opt Options) storage.Storage {
 	if fileExt == `` {
 		*opt.FileStoragePath += `.json`
 	}
+
+	FileStoragePath = *opt.FileStoragePath
 
 	// Open file
 	file, err := os.OpenFile(*opt.FileStoragePath, os.O_RDWR|os.O_CREATE, 0666)
