@@ -149,38 +149,32 @@ type Statuses struct {
 // sendMetrics sends the metrics to the server.
 func (c *Collector) sendMetrics() {
 	statuses := Statuses{}
+	metrics := []Metric{}
 
 	for name, value := range c.gauge {
-		status, err := c.sendPOST(Metric{
+		metrics = append(metrics, Metric{
 			ID:    name,
 			MType: `gauge`,
 			Value: &value,
 		})
-		if err == nil && status != nil {
-			if *status == 200 {
-				statuses.Success++
-			} else if *status == 500 {
-				statuses.Internal++
-			} else {
-				statuses.Fail++
-			}
-		}
 	}
 
 	for name, value := range c.counter {
-		status, err := c.sendPOST(Metric{
+		metrics = append(metrics, Metric{
 			ID:    name,
 			MType: `counter`,
 			Delta: &value,
 		})
-		if err == nil && status != nil {
-			if *status == 200 {
-				statuses.Success++
-			} else if *status == 500 {
-				statuses.Internal++
-			} else {
-				statuses.Fail++
-			}
+	}
+
+	status, err := c.sendPOST(metrics)
+	if err == nil && status != nil {
+		if *status == 200 {
+			statuses.Success++
+		} else if *status == 500 {
+			statuses.Internal++
+		} else {
+			statuses.Fail++
 		}
 	}
 
@@ -200,8 +194,8 @@ func (c *Collector) sendMetrics() {
 //
 // Parameters:
 // - metric: the metric to be sent
-func (c *Collector) sendPOST(metric Metric) (*int, error) {
-	b, _ := json.Marshal(metric)
+func (c *Collector) sendPOST(metrics []Metric) (*int, error) {
+	b, _ := json.Marshal(metrics)
 
 	var gz bytes.Buffer
 
@@ -209,7 +203,7 @@ func (c *Collector) sendPOST(metric Metric) (*int, error) {
 	w.Write(b)
 	w.Close()
 
-	req, err := http.NewRequest(http.MethodPost, `http://`+*ServerAddress+`/update`, &gz)
+	req, err := http.NewRequest(http.MethodPost, `http://`+*ServerAddress+`/updates/`, &gz)
 	if err != nil {
 		zap.L().Error(err.Error())
 		return nil, err

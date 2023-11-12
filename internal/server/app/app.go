@@ -140,6 +140,45 @@ func (a *AppSevice) UpdateMetricByBody(ctx *gin.Context) {
 	ctx.JSON(http.StatusOK, updated)
 }
 
+type Metrics []Metric
+
+func (a *AppSevice) UpdateManyMetrics(ctx *gin.Context) {
+	if !a.checkStorage(ctx) {
+		return
+	}
+
+	// Check body
+	if ctx.Request.Body == nil {
+		ctx.String(http.StatusBadRequest, errBody.Error())
+		return
+	}
+
+	// Read body
+	b, err := io.ReadAll(ctx.Request.Body)
+	if err != nil {
+		ctx.String(http.StatusBadRequest, errBody.Error())
+		return
+	}
+	defer ctx.Request.Body.Close()
+
+	// Unmarshal
+	var body Metrics
+	if err := json.Unmarshal(b, &body); err != nil {
+		ctx.String(http.StatusBadRequest, errBody.Error())
+		return
+	}
+
+	for _, metric := range body {
+		_, err := a.updateMetric(metric.ID, metric.MType, metric.Value, metric.Delta, nil)
+		if err != nil {
+			ctx.String(http.StatusBadRequest, err.Error())
+			return
+		}
+	}
+
+	ctx.JSON(http.StatusOK, body)
+}
+
 // updateMetric updates a metric based on the provided parameters.
 //
 // Parameters:
@@ -316,8 +355,6 @@ func (a *AppSevice) checkStorage(c *gin.Context) bool {
 
 // parseBody parses the request body and returns a Metric object and an error.
 //
-// # You can read changelog for more details
-//
 // Parameters:
 //   - ctx: the gin context.
 //
@@ -335,8 +372,6 @@ func (a *AppSevice) parseBody(ctx *gin.Context) (Metric, error) {
 	if err != nil {
 		return Metric{}, err
 	}
-
-	// Close body
 	defer ctx.Request.Body.Close()
 
 	// Unmarshal
