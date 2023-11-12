@@ -11,6 +11,7 @@ import (
 	"os"
 	"runtime"
 	"strconv"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -24,15 +25,16 @@ var (
 
 type Collector struct {
 	done    chan struct{}
+	mutex   sync.Mutex
 	gauge   map[string]float64
 	counter map[string]int64
 }
 
 type Metric struct {
-	ID    string   `json:"id"`              // Name of metric
-	MType string   `json:"type"`            // Gauge or Counter
-	Delta *int64   `json:"delta,omitempty"` // Value if metric is a counter
-	Value *float64 `json:"value,omitempty"` // Value if metric is a gauge
+	ID    string  `json:"id"`              // Name of metric
+	MType string  `json:"type"`            // Gauge or Counter
+	Delta int64   `json:"delta,omitempty"` // Value if metric is a counter
+	Value float64 `json:"value,omitempty"` // Value if metric is a gauge
 }
 
 // envParse initializes the ServerAddress, PollInterval, and ReportInterval
@@ -90,7 +92,7 @@ func (c *Collector) StartTickers() {
 		case <-collectTicker.C:
 			c.collectMetric()
 		case <-sendTicker.C:
-			c.sendMetrics()
+			go c.sendMetrics()
 		}
 	}
 }
@@ -103,6 +105,9 @@ func (c *Collector) CloseChannel() {
 
 // collectMetric collects various metrics and stores them in the gauge and counter maps.
 func (c *Collector) collectMetric() {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 
@@ -148,6 +153,12 @@ type Statuses struct {
 
 // sendMetrics sends the metrics to the server.
 func (c *Collector) sendMetrics() {
+	// Looks like may cause deadlock, but it doesn't
+	//
+	// When server will up, it will send all metrics to the server
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
 	statuses := Statuses{}
 	metrics := []Metric{}
 
@@ -155,7 +166,7 @@ func (c *Collector) sendMetrics() {
 		metrics = append(metrics, Metric{
 			ID:    name,
 			MType: `gauge`,
-			Value: &value,
+			Value: value,
 		})
 	}
 
@@ -163,19 +174,25 @@ func (c *Collector) sendMetrics() {
 		metrics = append(metrics, Metric{
 			ID:    name,
 			MType: `counter`,
-			Delta: &value,
+			Delta: value,
 		})
 	}
 
-	status, err := c.sendPOST(metrics)
-	if err == nil && status != nil {
-		if *status == 200 {
-			statuses.Success++
-		} else if *status == 500 {
-			statuses.Internal++
-		} else {
-			statuses.Fail++
+	// Request counter models
+	if err := c.retryIfError(func() (*int, error) {
+		status, err := c.sendPOST(metrics)
+		if err == nil && status != nil {
+			if *status == 200 {
+				statuses.Success++
+			} else if *status == 500 {
+				statuses.Internal++
+			} else {
+				statuses.Fail++
+			}
 		}
+		return status, err
+	}); err != nil {
+		zap.L().Error(`Error while sending metrics to the server`, zap.Error(err))
 	}
 
 	// Reset poll count
@@ -205,7 +222,6 @@ func (c *Collector) sendPOST(metrics []Metric) (*int, error) {
 
 	req, err := http.NewRequest(http.MethodPost, `http://`+*ServerAddress+`/updates/`, &gz)
 	if err != nil {
-		zap.L().Error(err.Error())
 		return nil, err
 	}
 
@@ -215,10 +231,40 @@ func (c *Collector) sendPOST(metrics []Metric) (*int, error) {
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		zap.L().Error(err.Error())
 		return nil, err
 	}
 	defer res.Body.Close()
 
 	return &res.StatusCode, nil
+}
+
+// retryIfError retries the given function up to 3 times if it returns an error.
+//
+// The function takes a single parameter:
+// - f: a function that returns an error.
+//
+// It returns an error.
+func (c *Collector) retryIfError(f func() (*int, error)) error {
+	errorsCount := 0
+	var status *int
+	var err error
+
+	for errorsCount < 3 {
+		status, err = f()
+
+		if err == nil && status != nil {
+			return nil
+		}
+
+		timer := (1 + (errorsCount * 2))
+		time.Sleep(time.Duration(timer) * time.Second)
+
+		zap.L().Debug(
+			`Error while sending metrics to the server`,
+			zap.Int(`Wait`, timer),
+		)
+		errorsCount++
+	}
+
+	return err
 }

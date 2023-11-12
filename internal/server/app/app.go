@@ -9,6 +9,7 @@ import (
 
 	"github.com/Jourloy/go-metrics-collector/internal/server/storage"
 	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
 )
 
 var errType error = errors.New(`type is invalid or not found`)
@@ -41,26 +42,6 @@ func GetAppSevice(s storage.Storage) *AppSevice {
 	return &AppSevice{
 		storage: s,
 	}
-}
-
-// GetAllMetrics retrieves all metrics from the storage and returns them in the HTML format.
-//
-// Parameters:
-//   - ctx: the gin context.
-func (a *AppSevice) GetAllMetrics(ctx *gin.Context) {
-	gauge, counter := a.storage.GetValues()
-	merged := make(map[string]any, len(gauge)+len(counter))
-
-	for name, value := range counter {
-		merged[name] = value
-	}
-	for name, value := range gauge {
-		merged[name] = value
-	}
-
-	ctx.HTML(http.StatusOK, `index.tmpl`, gin.H{
-		`merged`: merged,
-	})
 }
 
 // Live returns the response "Live" with a status code of 200 OK.
@@ -171,8 +152,8 @@ func (a *AppSevice) UpdateManyMetrics(ctx *gin.Context) {
 	for _, metric := range body {
 		_, err := a.updateMetric(metric.ID, metric.MType, metric.Value, metric.Delta, nil)
 		if err != nil {
-			ctx.String(http.StatusBadRequest, err.Error())
-			return
+			zap.L().Error(`Failed to update metric`, zap.Error(err))
+			continue
 		}
 	}
 
@@ -336,6 +317,27 @@ func (a *AppSevice) GetMetricByBody(ctx *gin.Context) {
 
 	ctx.Header(`Content-Type`, `application/json`)
 	ctx.JSON(http.StatusOK, metric)
+}
+
+// GetAllMetrics retrieves all metrics from the storage and returns them in the HTML format.
+//
+// Parameters:
+//   - ctx: the gin context.
+func (a *AppSevice) GetAllMetrics(ctx *gin.Context) {
+	gauge, counter := a.storage.GetValues()
+
+	merged := make(map[string]any, len(gauge)+len(counter))
+
+	for name, value := range counter {
+		merged[name] = value
+	}
+	for name, value := range gauge {
+		merged[name] = value
+	}
+
+	ctx.HTML(http.StatusOK, `index.tmpl`, gin.H{
+		`merged`: merged,
+	})
 }
 
 // checkStorage checks if the storage is initialized.

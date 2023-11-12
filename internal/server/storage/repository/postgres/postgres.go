@@ -1,6 +1,9 @@
 package postgres
 
 import (
+	"slices"
+	"time"
+
 	"github.com/Jourloy/go-metrics-collector/internal/server/storage"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -67,15 +70,17 @@ func (r *PostgresStorage) GetValues() (map[string]float64, map[string]int64) {
 	counterModels := []CounterModel{}
 
 	// Request gauge models
-	err := r.db.Select(&gaugeModels, `SELECT * FROM gauge`)
-	if err != nil {
-		zap.L().Error(err.Error())
+	if err := r.retryIfError(func() error {
+		return r.db.Select(&gaugeModels, `SELECT * FROM gauge`)
+	}); err != nil {
+		zap.L().Error(`Error while getting data from Postgres`, zap.Error(err))
 	}
 
 	// Request counter models
-	err = r.db.Select(&counterModels, `SELECT * FROM counter`)
-	if err != nil {
-		zap.L().Error(err.Error())
+	if err := r.retryIfError(func() error {
+		return r.db.Select(&counterModels, `SELECT * FROM counter`)
+	}); err != nil {
+		zap.L().Error(`Error while getting data from Postgres`, zap.Error(err))
 	}
 
 	// Convert gauge models to maps
@@ -105,9 +110,10 @@ func (r *PostgresStorage) GetCounterByName(name string) (*CounterModel, error) {
 	counterModel := CounterModel{}
 
 	// Request counter model
-	err := r.db.Get(&counterModel, `SELECT * FROM counter WHERE name = $1`, name)
-	if err != nil {
-		zap.L().Error(err.Error())
+	if err := r.retryIfError(func() error {
+		return r.db.Get(&counterModel, `SELECT * FROM counter WHERE name = $1`, name)
+	}); err != nil {
+		zap.L().Error(`Error while operate with Postgres`, zap.Error(err))
 		return nil, err
 	}
 
@@ -126,9 +132,10 @@ func (r *PostgresStorage) GetGaugeByName(name string) (*GaugeModel, error) {
 	gaugeModel := GaugeModel{}
 
 	// Request counter model
-	err := r.db.Get(&gaugeModel, `SELECT * FROM gauge WHERE name = $1`, name)
-	if err != nil {
-		zap.L().Error(err.Error())
+	if err := r.retryIfError(func() error {
+		return r.db.Get(&gaugeModel, `SELECT * FROM gauge WHERE name = $1`, name)
+	}); err != nil {
+		zap.L().Error(`Error while getting data from Postgres`, zap.Error(err))
 		return nil, err
 	}
 
@@ -146,7 +153,6 @@ func (r *PostgresStorage) GetGaugeByName(name string) (*GaugeModel, error) {
 func (r *PostgresStorage) GetCounterValue(name string) (int64, bool) {
 	counterModel, err := r.GetCounterByName(name)
 	if err != nil {
-		zap.L().Error(err.Error())
 		return 0, false
 	}
 
@@ -166,17 +172,27 @@ func (r *PostgresStorage) UpdateCounterMetric(name string, value int64) int64 {
 
 	// If counter doesn't exist
 	if err != nil {
-		// Insert
-		_, err := r.db.NamedExec(`INSERT INTO counter (name, value) VALUES (:name, :value)`, CounterModel{Name: name, Value: value})
-		if err != nil {
-			zap.L().Error(err.Error())
+		// Insert metric and return 0 if error
+		if err := r.retryIfError(func() error {
+			_, err := r.db.NamedExec(
+				`INSERT INTO counter (name, value) VALUES (:name, :value)`,
+				CounterModel{Name: name, Value: value},
+			)
+			return err
+		}); err != nil {
+			zap.L().Error(`Error while inserting data into Postgres`, zap.Error(err))
 			return 0
 		}
 	} else {
-		// Update
-		_, err := r.db.NamedExec(`UPDATE counter SET value = :value WHERE name = :name`, CounterModel{Name: name, Value: counterModel.Value + value})
-		if err != nil {
-			zap.L().Error(err.Error())
+		// Update metric and return 0 if error
+		if err := r.retryIfError(func() error {
+			_, err := r.db.NamedExec(
+				`UPDATE counter SET value = :value WHERE name = :name`,
+				CounterModel{Name: name, Value: counterModel.Value + value},
+			)
+			return err
+		}); err != nil {
+			zap.L().Error(`Error while updating data into Postgres`, zap.Error(err))
 			return 0
 		}
 	}
@@ -184,7 +200,6 @@ func (r *PostgresStorage) UpdateCounterMetric(name string, value int64) int64 {
 	// Get updated value
 	updatedCounterModel, err := r.GetCounterByName(name)
 	if err != nil {
-		zap.L().Error(err.Error())
 		return 0
 	}
 
@@ -202,7 +217,6 @@ func (r *PostgresStorage) UpdateCounterMetric(name string, value int64) int64 {
 func (r *PostgresStorage) GetGaugeValue(name string) (float64, bool) {
 	gaugeModel, err := r.GetGaugeByName(name)
 	if err != nil {
-		zap.L().Error(err.Error())
 		return 0, false
 	}
 
@@ -220,19 +234,29 @@ func (r *PostgresStorage) GetGaugeValue(name string) (float64, bool) {
 func (r *PostgresStorage) UpdateGaugeMetric(name string, value float64) float64 {
 	_, err := r.GetGaugeByName(name)
 
-	// If counter doesn't exist
+	// If gauge doesn't exist
 	if err != nil {
-		// Insert
-		_, err := r.db.NamedExec(`INSERT INTO gauge (name, value) VALUES (:name, :value)`, GaugeModel{Name: name, Value: value})
-		if err != nil {
-			zap.L().Error(err.Error())
+		// Insert metric and return 0 if error
+		if err := r.retryIfError(func() error {
+			_, err := r.db.NamedExec(
+				`INSERT INTO gauge (name, value) VALUES (:name, :value)`,
+				GaugeModel{Name: name, Value: value},
+			)
+			return err
+		}); err != nil {
+			zap.L().Error(`Error while inserting data into Postgres`, zap.Error(err))
 			return 0
 		}
 	} else {
-		// Update
-		_, err := r.db.NamedExec(`UPDATE gauge SET value = :value WHERE name = :name`, GaugeModel{Name: name, Value: value})
-		if err != nil {
-			zap.L().Error(err.Error())
+		// Update metric and return 0 if error
+		if err := r.retryIfError(func() error {
+			_, err := r.db.NamedExec(
+				`UPDATE gauge SET value = :value WHERE name = :name`,
+				GaugeModel{Name: name, Value: value},
+			)
+			return err
+		}); err != nil {
+			zap.L().Error(`Error while updating data into Postgres`, zap.Error(err))
 			return 0
 		}
 	}
@@ -240,9 +264,48 @@ func (r *PostgresStorage) UpdateGaugeMetric(name string, value float64) float64 
 	// Get updated value
 	updatedGaugeModel, err := r.GetGaugeByName(name)
 	if err != nil {
-		zap.L().Error(err.Error())
 		return 0
 	}
 
 	return updatedGaugeModel.Value
+}
+
+var retriableErrors = []string{
+	`connection_exception`,
+	`connection_does_not_exist`,
+	`connection_failure`,
+	`sqlclient_unable_to_establish_sqlconnection`,
+	`sqlserver_rejected_establishment_of_sqlconnection`,
+	`transaction_resolution_unknown`,
+	`protocol_violation`,
+}
+
+// retryIfError retries the given function up to 3 times if it returns an error.
+//
+// The function takes a single parameter:
+// - f: a function that returns an error.
+//
+// It returns an error.
+func (r *PostgresStorage) retryIfError(f func() error) error {
+	errorsCount := 0
+	var err error
+
+	for errorsCount < 3 {
+		err = f()
+		if err == nil {
+			return nil
+		} else if !slices.Contains(retriableErrors, err.Error()) {
+			return err
+		}
+
+		timer := 1 + (errorsCount * 2)
+		zap.L().Error(
+			`Error while getting data from Postgres`,
+			zap.Int(`Wait`, timer),
+		)
+		time.Sleep(time.Duration(timer) * time.Second)
+		errorsCount++
+	}
+
+	return err
 }
