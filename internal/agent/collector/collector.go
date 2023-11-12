@@ -11,7 +11,6 @@ import (
 	"os"
 	"runtime"
 	"strconv"
-	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -25,16 +24,15 @@ var (
 
 type Collector struct {
 	done    chan struct{}
-	mutex   sync.Mutex
 	gauge   map[string]float64
 	counter map[string]int64
 }
 
 type Metric struct {
-	ID    string  `json:"id"`              // Name of metric
-	MType string  `json:"type"`            // Gauge or Counter
-	Delta int64   `json:"delta,omitempty"` // Value if metric is a counter
-	Value float64 `json:"value,omitempty"` // Value if metric is a gauge
+	ID    string   `json:"id"`              // Name of metric
+	MType string   `json:"type"`            // Gauge or Counter
+	Delta *int64   `json:"delta,omitempty"` // Value if metric is a counter
+	Value *float64 `json:"value,omitempty"` // Value if metric is a gauge
 }
 
 // envParse initializes the ServerAddress, PollInterval, and ReportInterval
@@ -105,9 +103,6 @@ func (c *Collector) CloseChannel() {
 
 // collectMetric collects various metrics and stores them in the gauge and counter maps.
 func (c *Collector) collectMetric() {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
 
@@ -153,46 +148,50 @@ type Statuses struct {
 
 // sendMetrics sends the metrics to the server.
 func (c *Collector) sendMetrics() {
-	// Looks like may cause deadlock, but it doesn't
-	//
-	// When server will up, it will send all metrics to the server
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
 	statuses := Statuses{}
-	metrics := []Metric{}
 
 	for name, value := range c.gauge {
-		metrics = append(metrics, Metric{
-			ID:    name,
-			MType: `gauge`,
-			Value: value,
-		})
+		if err := c.retryIfError(func() (*int, error) {
+			status, err := c.sendPOST(Metric{
+				ID:    name,
+				MType: `gauge`,
+				Value: &value,
+			})
+			if err == nil && status != nil {
+				if *status == 200 {
+					statuses.Success++
+				} else if *status == 500 {
+					statuses.Internal++
+				} else {
+					statuses.Fail++
+				}
+			}
+			return status, err
+		}); err != nil {
+			zap.L().Error(`Error while sending metrics to the server`, zap.Error(err))
+		}
 	}
 
 	for name, value := range c.counter {
-		metrics = append(metrics, Metric{
-			ID:    name,
-			MType: `counter`,
-			Delta: value,
-		})
-	}
-
-	// Request counter models
-	if err := c.retryIfError(func() (*int, error) {
-		status, err := c.sendPOST(metrics)
-		if err == nil && status != nil {
-			if *status == 200 {
-				statuses.Success++
-			} else if *status == 500 {
-				statuses.Internal++
-			} else {
-				statuses.Fail++
+		if err := c.retryIfError(func() (*int, error) {
+			status, err := c.sendPOST(Metric{
+				ID:    name,
+				MType: `counter`,
+				Delta: &value,
+			})
+			if err == nil && status != nil {
+				if *status == 200 {
+					statuses.Success++
+				} else if *status == 500 {
+					statuses.Internal++
+				} else {
+					statuses.Fail++
+				}
 			}
+			return status, err
+		}); err != nil {
+			zap.L().Error(`Error while sending metrics to the server`, zap.Error(err))
 		}
-		return status, err
-	}); err != nil {
-		zap.L().Error(`Error while sending metrics to the server`, zap.Error(err))
 	}
 
 	// Reset poll count
@@ -211,7 +210,7 @@ func (c *Collector) sendMetrics() {
 //
 // Parameters:
 // - metric: the metric to be sent
-func (c *Collector) sendPOST(metrics []Metric) (*int, error) {
+func (c *Collector) sendPOST(metrics Metric) (*int, error) {
 	b, _ := json.Marshal(metrics)
 
 	var gz bytes.Buffer
@@ -220,7 +219,7 @@ func (c *Collector) sendPOST(metrics []Metric) (*int, error) {
 	w.Write(b)
 	w.Close()
 
-	req, err := http.NewRequest(http.MethodPost, `http://`+*ServerAddress+`/updates/`, &gz)
+	req, err := http.NewRequest(http.MethodPost, `http://`+*ServerAddress+`/update/`, &gz)
 	if err != nil {
 		return nil, err
 	}
