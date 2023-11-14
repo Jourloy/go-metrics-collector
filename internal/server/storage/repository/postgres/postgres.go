@@ -44,12 +44,20 @@ type Options struct {
 // Returns:
 // - a pointer to a storage.Storage interface.
 func CreateRepository(opt Options) storage.Storage {
-	db, err := sqlx.Connect(`postgres`, *opt.PostgresDSN)
-	if err != nil {
-		zap.L().Error(err.Error())
-		return nil
-	}
+	var db *sqlx.DB
 
+	// Connect to Postgres
+	retryIfError(func() error {
+		database, err := sqlx.Connect(`postgres`, *opt.PostgresDSN)
+		if err != nil {
+			zap.L().Error(err.Error())
+			return err
+		}
+		db = database
+		return nil
+	})
+
+	// Create tables
 	db.MustExec(schema)
 
 	return &PostgresStorage{
@@ -70,14 +78,14 @@ func (r *PostgresStorage) GetValues() (map[string]float64, map[string]int64) {
 	counterModels := []CounterModel{}
 
 	// Request gauge models
-	if err := r.retryIfError(func() error {
+	if err := retryIfError(func() error {
 		return r.db.Select(&gaugeModels, `SELECT * FROM gauge`)
 	}); err != nil {
 		zap.L().Error(`Error while getting data from Postgres`, zap.Error(err))
 	}
 
 	// Request counter models
-	if err := r.retryIfError(func() error {
+	if err := retryIfError(func() error {
 		return r.db.Select(&counterModels, `SELECT * FROM counter`)
 	}); err != nil {
 		zap.L().Error(`Error while getting data from Postgres`, zap.Error(err))
@@ -110,7 +118,7 @@ func (r *PostgresStorage) GetCounterByName(name string) (*CounterModel, error) {
 	counterModel := CounterModel{}
 
 	// Request counter model
-	if err := r.retryIfError(func() error {
+	if err := retryIfError(func() error {
 		return r.db.Get(&counterModel, `SELECT * FROM counter WHERE name = $1`, name)
 	}); err != nil {
 		zap.L().Error(`Error while operate with Postgres`, zap.Error(err))
@@ -132,7 +140,7 @@ func (r *PostgresStorage) GetGaugeByName(name string) (*GaugeModel, error) {
 	gaugeModel := GaugeModel{}
 
 	// Request counter model
-	if err := r.retryIfError(func() error {
+	if err := retryIfError(func() error {
 		return r.db.Get(&gaugeModel, `SELECT * FROM gauge WHERE name = $1`, name)
 	}); err != nil {
 		zap.L().Error(`Error while getting data from Postgres`, zap.Error(err))
@@ -173,7 +181,7 @@ func (r *PostgresStorage) UpdateCounterMetric(name string, value int64) int64 {
 	// If counter doesn't exist
 	if err != nil {
 		// Insert metric and return 0 if error
-		if err := r.retryIfError(func() error {
+		if err := retryIfError(func() error {
 			_, err := r.db.NamedExec(
 				`INSERT INTO counter (name, value) VALUES (:name, :value)`,
 				CounterModel{Name: name, Value: value},
@@ -185,7 +193,7 @@ func (r *PostgresStorage) UpdateCounterMetric(name string, value int64) int64 {
 		}
 	} else {
 		// Update metric and return 0 if error
-		if err := r.retryIfError(func() error {
+		if err := retryIfError(func() error {
 			_, err := r.db.NamedExec(
 				`UPDATE counter SET value = :value WHERE name = :name`,
 				CounterModel{Name: name, Value: counterModel.Value + value},
@@ -237,7 +245,7 @@ func (r *PostgresStorage) UpdateGaugeMetric(name string, value float64) float64 
 	// If gauge doesn't exist
 	if err != nil {
 		// Insert metric and return 0 if error
-		if err := r.retryIfError(func() error {
+		if err := retryIfError(func() error {
 			_, err := r.db.NamedExec(
 				`INSERT INTO gauge (name, value) VALUES (:name, :value)`,
 				GaugeModel{Name: name, Value: value},
@@ -249,7 +257,7 @@ func (r *PostgresStorage) UpdateGaugeMetric(name string, value float64) float64 
 		}
 	} else {
 		// Update metric and return 0 if error
-		if err := r.retryIfError(func() error {
+		if err := retryIfError(func() error {
 			_, err := r.db.NamedExec(
 				`UPDATE gauge SET value = :value WHERE name = :name`,
 				GaugeModel{Name: name, Value: value},
@@ -270,6 +278,7 @@ func (r *PostgresStorage) UpdateGaugeMetric(name string, value float64) float64 
 	return updatedGaugeModel.Value
 }
 
+// Class 08 errors
 var retriableErrors = []string{
 	`connection_exception`,
 	`connection_does_not_exist`,
@@ -286,7 +295,7 @@ var retriableErrors = []string{
 // - f: a function that returns an error.
 //
 // It returns an error.
-func (r *PostgresStorage) retryIfError(f func() error) error {
+func retryIfError(f func() error) error {
 	errorsCount := 0
 	var err error
 
