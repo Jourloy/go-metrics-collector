@@ -150,6 +150,7 @@ type Statuses struct {
 func (c *Collector) sendMetrics() {
 	statuses := Statuses{}
 
+	// Send gauge metrics
 	for name, value := range c.gauge {
 		if err := c.retryIfError(func() (*int, error) {
 			status, err := c.sendPOST(Metric{
@@ -172,6 +173,7 @@ func (c *Collector) sendMetrics() {
 		}
 	}
 
+	// Send counter metrics
 	for name, value := range c.counter {
 		if err := c.retryIfError(func() (*int, error) {
 			status, err := c.sendPOST(Metric{
@@ -215,19 +217,23 @@ func (c *Collector) sendPOST(metrics Metric) (*int, error) {
 
 	var gz bytes.Buffer
 
+	// Compress the request body
 	w := gzip.NewWriter(&gz)
 	w.Write(b)
 	w.Close()
 
+	// Create the request
 	req, err := http.NewRequest(http.MethodPost, `http://`+*ServerAddress+`/update/`, &gz)
 	if err != nil {
 		return nil, err
 	}
 
+	// Set headers
 	req.Header.Set(`Content-Encoding`, `gzip`)
 	req.Header.Set(`Accept-Encoding`, `gzip`)
 	req.Header.Set(`Content-Type`, `application/json`)
 
+	// Send the request
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
 		return nil, err
