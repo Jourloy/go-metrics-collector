@@ -101,13 +101,13 @@ func (r *PostgresStorage) GetValues() (map[string]float64, map[string]int64) {
 	}
 
 	// Convert gauge models to maps
-	gauge := make(map[string]float64)
+	gauge := make(map[string]float64, len(gaugeModels))
 	for _, model := range gaugeModels {
 		gauge[model.Name] = model.Value
 	}
 
 	// Convert counter models to maps
-	counter := make(map[string]int64)
+	counter := make(map[string]int64, len(counterModels))
 	for _, model := range counterModels {
 		counter[model.Name] = model.Value
 	}
