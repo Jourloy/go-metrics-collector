@@ -198,7 +198,10 @@ func (c *Collector) sendMetrics() {
 // Parameters:
 // - metric: the metric to be sent
 func (c *Collector) sendPOST(metrics Metric, statuses *Statuses) error {
-	b, _ := json.Marshal(metrics)
+	b, err := json.Marshal(metrics)
+	if err != nil {
+		return err
+	}
 
 	var gz bytes.Buffer
 
