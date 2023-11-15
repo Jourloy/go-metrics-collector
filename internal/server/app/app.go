@@ -71,16 +71,19 @@ func (a *AppSevice) UpdateMetricByParams(ctx *gin.Context) {
 
 	// Check URL params
 	if mType == `` {
+		zap.L().Error(errType.Error())
 		ctx.String(http.StatusBadRequest, errType.Error())
 		return
 	}
 
 	if name == `` {
+		zap.L().Error(errName.Error())
 		ctx.String(http.StatusNotFound, errName.Error())
 		return
 	}
 
 	if value == `` {
+		zap.L().Error(errValue.Error())
 		ctx.String(http.StatusBadRequest, errValue.Error())
 		return
 	}
@@ -88,6 +91,7 @@ func (a *AppSevice) UpdateMetricByParams(ctx *gin.Context) {
 	// Update metric
 	metric, err := a.updateMetric(name, mType, nil, nil, &value)
 	if err != nil {
+		zap.L().Error(err.Error())
 		ctx.String(http.StatusBadRequest, err.Error())
 		return
 	}
@@ -107,6 +111,7 @@ func (a *AppSevice) UpdateMetricByBody(ctx *gin.Context) {
 	// Check body
 	metric, err := a.parseBody(ctx)
 	if err != nil {
+		zap.L().Error(err.Error())
 		ctx.String(http.StatusBadRequest, err.Error())
 		return
 	}
@@ -114,6 +119,7 @@ func (a *AppSevice) UpdateMetricByBody(ctx *gin.Context) {
 	// Update metric
 	updated, err := a.updateMetric(metric.ID, metric.MType, metric.Value, metric.Delta, nil)
 	if err != nil {
+		zap.L().Error(err.Error())
 		ctx.String(http.StatusBadRequest, err.Error())
 		return
 	}
@@ -123,6 +129,7 @@ func (a *AppSevice) UpdateMetricByBody(ctx *gin.Context) {
 
 type Metrics []Metric
 
+// UpdateManyMetrics updates multiple metrics from butch request.
 func (a *AppSevice) UpdateManyMetrics(ctx *gin.Context) {
 	if !a.checkStorage(ctx) {
 		return
@@ -130,6 +137,7 @@ func (a *AppSevice) UpdateManyMetrics(ctx *gin.Context) {
 
 	// Check body
 	if ctx.Request.Body == nil {
+		zap.L().Error(errBody.Error())
 		ctx.String(http.StatusBadRequest, errBody.Error())
 		return
 	}
@@ -137,6 +145,7 @@ func (a *AppSevice) UpdateManyMetrics(ctx *gin.Context) {
 	// Read body
 	b, err := io.ReadAll(ctx.Request.Body)
 	if err != nil {
+		zap.L().Error(errBody.Error())
 		ctx.String(http.StatusBadRequest, errBody.Error())
 		return
 	}
@@ -145,6 +154,7 @@ func (a *AppSevice) UpdateManyMetrics(ctx *gin.Context) {
 	// Unmarshal
 	var body Metrics
 	if err := json.Unmarshal(b, &body); err != nil {
+		zap.L().Error(errBody.Error())
 		ctx.String(http.StatusBadRequest, errBody.Error())
 		return
 	}
@@ -241,6 +251,7 @@ func (a *AppSevice) GetMetricByParams(ctx *gin.Context) {
 
 	// Check URL params
 	if name == `` || mType == `` {
+		zap.L().Error(errNotFound.Error())
 		ctx.String(http.StatusBadRequest, errNotFound.Error())
 		return
 	}
@@ -249,6 +260,7 @@ func (a *AppSevice) GetMetricByParams(ctx *gin.Context) {
 	if mType == `counter` {
 		u, err := a.storage.GetCounterValue(name)
 		if !err {
+			zap.L().Error(errNotFound.Error())
 			ctx.String(http.StatusNotFound, errNotFound.Error())
 			return
 		}
@@ -258,6 +270,7 @@ func (a *AppSevice) GetMetricByParams(ctx *gin.Context) {
 	} else if mType == `gauge` {
 		u, err := a.storage.GetGaugeValue(name)
 		if !err {
+			zap.L().Error(errNotFound.Error())
 			ctx.String(http.StatusNotFound, errNotFound.Error())
 			return
 		}
@@ -265,6 +278,7 @@ func (a *AppSevice) GetMetricByParams(ctx *gin.Context) {
 		ctx.String(http.StatusOK, `%g`, u)
 		return
 	} else {
+		zap.L().Error(errType.Error())
 		ctx.String(http.StatusBadRequest, errType.Error())
 		return
 	}
@@ -282,6 +296,7 @@ func (a *AppSevice) GetMetricByBody(ctx *gin.Context) {
 	// Check body
 	template, err := a.parseBody(ctx)
 	if err != nil {
+		zap.L().Error(err.Error())
 		ctx.String(http.StatusBadRequest, err.Error())
 		return
 	}
@@ -291,6 +306,7 @@ func (a *AppSevice) GetMetricByBody(ctx *gin.Context) {
 	if template.MType == `counter` {
 		u, ok := a.storage.GetCounterValue(template.ID)
 		if !ok {
+			zap.L().Error(errNotFound.Error())
 			ctx.String(http.StatusNotFound, errNotFound.Error())
 			return
 		}
@@ -302,6 +318,7 @@ func (a *AppSevice) GetMetricByBody(ctx *gin.Context) {
 	} else if template.MType == `gauge` {
 		u, ok := a.storage.GetGaugeValue(template.ID)
 		if !ok {
+			zap.L().Error(errNotFound.Error())
 			ctx.String(http.StatusNotFound, errNotFound.Error())
 			return
 		}
@@ -311,6 +328,7 @@ func (a *AppSevice) GetMetricByBody(ctx *gin.Context) {
 			Value: &u,
 		}
 	} else {
+		zap.L().Error(errType.Error())
 		ctx.String(http.StatusBadRequest, errType.Error())
 		return
 	}
@@ -349,7 +367,8 @@ func (a *AppSevice) GetAllMetrics(ctx *gin.Context) {
 //   - true if the storage is initialized, false otherwise.
 func (a *AppSevice) checkStorage(c *gin.Context) bool {
 	if a.storage == nil {
-		c.String(http.StatusInternalServerError, `Storage not initialized`)
+		zap.L().Error(`storage not initialized`)
+		c.String(http.StatusInternalServerError, `storage not initialized`)
 		return false
 	}
 	return true
