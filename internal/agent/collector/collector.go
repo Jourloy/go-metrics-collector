@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/avast/retry-go"
 	"go.uber.org/zap"
 )
 
@@ -152,29 +153,31 @@ func (c *Collector) sendMetrics() {
 
 	// Send gauge metrics
 	for name, value := range c.gauge {
-		if err := c.retryIfError(func() (*int, error) {
-			status, err := c.sendPOST(Metric{
-				ID:    name,
-				MType: `gauge`,
-				Value: &value,
-			}, &statuses)
-			return status, err
-		}); err != nil {
-			zap.L().Error(`Error while sending metrics to the server`, zap.Error(err))
+		if err := c.retryIfError(
+			func() error {
+				return c.sendPOST(Metric{
+					ID:    name,
+					MType: `gauge`,
+					Value: &value,
+				}, &statuses)
+			},
+		); err != nil {
+			zap.L().Error(err.Error())
 		}
 	}
 
 	// Send counter metrics
 	for name, value := range c.counter {
-		if err := c.retryIfError(func() (*int, error) {
-			status, err := c.sendPOST(Metric{
-				ID:    name,
-				MType: `counter`,
-				Delta: &value,
-			}, &statuses)
-			return status, err
-		}); err != nil {
-			zap.L().Error(`Error while sending metrics to the server`, zap.Error(err))
+		if err := c.retryIfError(
+			func() error {
+				return c.sendPOST(Metric{
+					ID:    name,
+					MType: `counter`,
+					Delta: &value,
+				}, &statuses)
+			},
+		); err != nil {
+			zap.L().Error(err.Error())
 		}
 	}
 
@@ -194,7 +197,7 @@ func (c *Collector) sendMetrics() {
 //
 // Parameters:
 // - metric: the metric to be sent
-func (c *Collector) sendPOST(metrics Metric, statuses *Statuses) (*int, error) {
+func (c *Collector) sendPOST(metrics Metric, statuses *Statuses) error {
 	b, _ := json.Marshal(metrics)
 
 	var gz bytes.Buffer
@@ -207,7 +210,7 @@ func (c *Collector) sendPOST(metrics Metric, statuses *Statuses) (*int, error) {
 	// Create the request
 	req, err := http.NewRequest(http.MethodPost, `http://`+*ServerAddress+`/update/`, &gz)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Set headers
@@ -218,7 +221,7 @@ func (c *Collector) sendPOST(metrics Metric, statuses *Statuses) (*int, error) {
 	// Send the request
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	defer res.Body.Close()
 
@@ -232,36 +235,19 @@ func (c *Collector) sendPOST(metrics Metric, statuses *Statuses) (*int, error) {
 		statuses.Fail++
 	}
 
-	return &res.StatusCode, nil
+	return nil
 }
 
-// retryIfError retries the given function up to 3 times if it returns an error.
-//
-// The function takes a single parameter:
-// - f: a function that returns an error.
-//
-// It returns an error.
-func (c *Collector) retryIfError(f func() (*int, error)) error {
-	errorsCount := 0
-	var status *int
-	var err error
-
-	for errorsCount < 3 {
-		status, err = f()
-
-		if err == nil && status != nil {
-			return nil
-		}
-
-		timer := (1 + (errorsCount * 2))
-		time.Sleep(time.Duration(timer) * time.Second)
-
-		zap.L().Debug(
-			`Error while sending metrics to the server`,
-			zap.Int(`Wait`, timer),
-		)
-		errorsCount++
-	}
-
-	return err
+// retryIfError retries the given function if it returns an error.
+func (c *Collector) retryIfError(f func() error) error {
+	return retry.Do(
+		func() error {
+			return f()
+		},
+		retry.DelayType(func(n uint, err error, config *retry.Config) time.Duration {
+			timer := 1 + (n * 2)
+			return time.Duration(timer) * time.Second
+		}),
+		retry.Attempts(3),
+	)
 }

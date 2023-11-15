@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/Jourloy/go-metrics-collector/internal/server/storage"
+	"github.com/avast/retry-go"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
 	"go.uber.org/zap"
@@ -47,15 +48,21 @@ func CreateRepository(opt Options) storage.Storage {
 	var db *sqlx.DB
 
 	// Connect to Postgres
-	retryIfError(func() error {
-		database, err := sqlx.Connect(`postgres`, *opt.PostgresDSN)
-		if err != nil {
-			zap.L().Error(err.Error())
-			return err
-		}
-		db = database
+	err := retryIfError(
+		func() error {
+			database, err := sqlx.Connect(`postgres`, *opt.PostgresDSN)
+			if err != nil {
+				zap.L().Error(err.Error())
+				return err
+			}
+			db = database
+			return nil
+		},
+	)
+	if err != nil {
+		zap.L().Error(err.Error())
 		return nil
-	})
+	}
 
 	// Create tables
 	db.MustExec(schema)
@@ -78,10 +85,13 @@ func (r *PostgresStorage) GetValues() (map[string]float64, map[string]int64) {
 	counterModels := []CounterModel{}
 
 	// Request gauge models
-	if err := retryIfError(func() error {
-		return r.db.Select(&gaugeModels, `SELECT * FROM gauge`)
-	}); err != nil {
-		zap.L().Error(`Error while getting data from Postgres`, zap.Error(err))
+	if err := retryIfError(
+		func() error {
+			return r.db.Select(&gaugeModels, `SELECT * FROM gauge`)
+		},
+	); err != nil {
+		zap.L().Error(err.Error())
+		return nil, nil
 	}
 
 	// Request counter models
@@ -289,32 +299,19 @@ var retriableErrors = []string{
 	`protocol_violation`,
 }
 
-// retryIfError retries the given function up to 3 times if it returns an error.
-//
-// The function takes a single parameter:
-// - f: a function that returns an error.
-//
-// It returns an error.
+// retryIfError retries the given function if it returns an error.
 func retryIfError(f func() error) error {
-	errorsCount := 0
-	var err error
-
-	for errorsCount < 3 {
-		err = f()
-		if err == nil {
-			return nil
-		} else if !slices.Contains(retriableErrors, err.Error()) {
-			return err
-		}
-
-		timer := 1 + (errorsCount * 2)
-		zap.L().Error(
-			`Error while getting data from Postgres`,
-			zap.Int(`Wait`, timer),
-		)
-		time.Sleep(time.Duration(timer) * time.Second)
-		errorsCount++
-	}
-
-	return err
+	return retry.Do(
+		func() error {
+			return f()
+		},
+		retry.DelayType(func(n uint, err error, config *retry.Config) time.Duration {
+			timer := 1 + (n * 2)
+			return time.Duration(timer) * time.Second
+		}),
+		retry.Attempts(3),
+		retry.RetryIf(func(err error) bool {
+			return slices.Contains(retriableErrors, err.Error())
+		}),
+	)
 }
