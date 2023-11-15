@@ -28,3 +28,6 @@ vendor/
 .env.agent
 .env.server
 .env
+
+# Other
+*.json

@@ -12,14 +12,14 @@ import (
 )
 
 var (
-	StoreInterval   = 0
-	FileStoragePath = ``
+	StoreInterval   time.Duration
+	FileStoragePath string
 	IsSave          = true
 	SyncSave        = false
 )
 
 type Options struct {
-	StoreInterval   *int
+	StoreInterval   time.Duration
 	FileStoragePath *string
 	Restore         *bool
 }
@@ -36,7 +36,7 @@ type MemStorage struct {
 // Returns:
 // - a pointer to a storage.Storage interface.
 func CreateRepository(opt Options) storage.Storage {
-	StoreInterval = *opt.StoreInterval
+	StoreInterval = opt.StoreInterval
 
 	gauge := make(map[string]float64)
 	counter := make(map[string]int64)
@@ -85,7 +85,7 @@ func CreateRepository(opt Options) storage.Storage {
 	}
 
 	// If StoreInterval is equal to 0, save syncronously
-	if *opt.StoreInterval == 0 {
+	if opt.StoreInterval == 0 {
 		SyncSave = true
 	}
 
@@ -109,11 +109,11 @@ func (r *MemStorage) StartTickers() {
 
 	zap.L().Info(
 		`MemStorage's tickers started`,
-		zap.Int(`StoreInterval`, StoreInterval),
+		zap.Duration(`StoreInterval`, StoreInterval),
 		zap.Bool(`Sync`, SyncSave),
 	)
 
-	saveTicker := time.NewTicker(time.Duration(StoreInterval) * time.Second)
+	saveTicker := time.NewTicker(time.Duration(StoreInterval))
 	defer saveTicker.Stop()
 
 	for {

@@ -4,6 +4,7 @@ import (
 	"flag"
 	"os"
 	"strconv"
+	"time"
 
 	"github.com/Jourloy/go-metrics-collector/internal/server/storage"
 	"github.com/Jourloy/go-metrics-collector/internal/server/storage/repository/memory"
@@ -12,10 +13,11 @@ import (
 )
 
 var (
-	PostgresDSN     = flag.String(`d`, ``, `Postgres DSN`)
-	StoreInterval   = flag.Int(`i`, 300, `Store interval in seconds`)
-	FileStoragePath = flag.String(`f`, `/tmp/metrics-db.json`, `File storage path`)
-	Restore         = flag.Bool(`r`, true, `Restore from file`)
+	StoreInterval     time.Duration
+	PostgresDSN       = flag.String(`d`, ``, `Postgres DSN`)
+	FileStoragePath   = flag.String(`f`, `/tmp/metrics-db.json`, `File storage path`)
+	Restore           = flag.Bool(`r`, true, `Restore from file`)
+	StoreIntervalFlag = flag.Int(`i`, 300, `Store interval in seconds`) // Cannot use flag.Duration because Yandex's autotest send int
 )
 
 // envParse initializes the StoreInterval, FileStoragePath, and Restore
@@ -26,9 +28,11 @@ func envParse() {
 	}
 
 	if env, exist := os.LookupEnv(`STORE_INTERVAL`); exist {
-		if i, err := strconv.Atoi(env); err == nil {
-			StoreInterval = &i
+		if dur, err := time.ParseDuration(env); err == nil {
+			StoreInterval = dur
 		}
+	} else {
+		StoreInterval = time.Duration(*StoreIntervalFlag) * time.Second
 	}
 
 	if env, exist := os.LookupEnv(`FILE_STORAGE_PATH`); exist {
@@ -50,7 +54,7 @@ func CreateRepository() storage.Storage {
 	zap.L().Debug(`Storage parameters:`,
 		zap.String(`PostgresDSN`, *PostgresDSN),
 		zap.String(`FileStoragePath`, *FileStoragePath),
-		zap.Int(`StoreInterval`, *StoreInterval),
+		zap.Duration(`StoreInterval`, StoreInterval),
 		zap.Bool(`Restore`, *Restore),
 	)
 
