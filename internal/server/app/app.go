@@ -183,6 +183,8 @@ func (a *AppSevice) UpdateManyMetrics(ctx *gin.Context) {
 // - error: an error if the metric update fails.
 func (a *AppSevice) updateMetric(name string, mType string, value *float64, delta *int64, strValue *string) (Metric, error) {
 	var updated Metric
+
+	// Update counter metric
 	if mType == `counter` {
 		var v int64
 
@@ -199,14 +201,19 @@ func (a *AppSevice) updateMetric(name string, mType string, value *float64, delt
 			return Metric{}, errCounter
 		}
 
-		// Update counter
+		// Update metric
 		u := a.storage.UpdateCounterMetric(name, v)
 		updated = Metric{
 			ID:    name,
 			MType: mType,
 			Delta: &u,
 		}
-	} else if mType == `gauge` {
+
+		return updated, nil
+	}
+
+	// Update gauge metric
+	if mType == `gauge` {
 		var v float64
 
 		// Find `Value` value
@@ -222,18 +229,18 @@ func (a *AppSevice) updateMetric(name string, mType string, value *float64, delt
 			return Metric{}, errGauge
 		}
 
-		// Update gauge
+		// Update metric
 		u := a.storage.UpdateGaugeMetric(name, v)
 		updated = Metric{
 			ID:    name,
 			MType: mType,
 			Value: &u,
 		}
-	} else {
-		return Metric{}, errType
+
+		return updated, nil
 	}
 
-	return updated, nil
+	return Metric{}, errType
 }
 
 // ShowValue handles the request to show a metric value.
