@@ -39,6 +39,7 @@ type Metric struct {
 // Return:
 //   - *AppService: a pointer to the initialized AppService instance.
 func GetAppSevice(s storage.Storage) *AppSevice {
+	zap.L().Debug(`sssss`, zap.Bool(`s`, s == nil))
 	return &AppSevice{
 		storage: s,
 	}
@@ -49,6 +50,7 @@ func GetAppSevice(s storage.Storage) *AppSevice {
 // Parameters:
 //   - ctx: the gin context.
 func (a *AppSevice) Pong(c *gin.Context) {
+	// Check storage
 	if !a.checkStorage(c) {
 		return
 	}

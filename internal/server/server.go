@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/Jourloy/go-metrics-collector/internal/server/handlers"
+	"github.com/Jourloy/go-metrics-collector/internal/server/storage"
 	"github.com/Jourloy/go-metrics-collector/internal/server/storage/repository"
 	"github.com/gin-gonic/gin"
 	"go.uber.org/zap"
@@ -37,7 +38,16 @@ func Start() {
 
 	flag.Parse()
 
-	s := repository.CreateRepository()
+	// Create storage
+	//
+	// If postgres DSN is set and not valid, ok will be false. In that case,
+	// I set s to nil for return 500 error on ping request
+	var s storage.Storage
+	if storage, ok := repository.CreateRepository(); ok {
+		s = storage
+	} else {
+		s = nil
+	}
 
 	// Load HTML templates
 	r.LoadHTMLGlob(`templates/*`)

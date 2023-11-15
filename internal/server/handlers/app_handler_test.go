@@ -162,7 +162,7 @@ func TestAppBodyHandlers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r := gin.Default()
 			g := r.Group(`/`)
-			s := repository.CreateRepository()
+			s, _ := repository.CreateRepository()
 
 			RegisterAppHandler(g, s)
 
@@ -259,7 +259,7 @@ func TestAppParamsHandlers(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			r := gin.Default()
 			g := r.Group(`/`)
-			s := repository.CreateRepository()
+			s, _ := repository.CreateRepository()
 
 			RegisterAppHandler(g, s)
 

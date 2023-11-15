@@ -53,7 +53,7 @@ func envParse() {
 //
 // Return:
 // - The created storage object of type `storage.Storage`.
-func CreateRepository() storage.Storage {
+func CreateRepository() (storage.Storage, bool) {
 	// Parse environment variables
 	envParse()
 
@@ -68,9 +68,10 @@ func CreateRepository() storage.Storage {
 	// Create Postgres storage
 	if *PostgresDSN != `` {
 		zap.L().Debug(`PostgresStorage created`)
-		return postgres.CreateRepository(postgres.Options{
+		p := postgres.CreateRepository(postgres.Options{
 			PostgresDSN: PostgresDSN,
 		})
+		return p, p != nil
 	}
 
 	// Create memory storage
@@ -84,5 +85,5 @@ func CreateRepository() storage.Storage {
 	// Start tickers for MemStorage
 	go memStorage.StartTickers()
 
-	return memStorage
+	return memStorage, true
 }
