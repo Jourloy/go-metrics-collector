@@ -86,7 +86,7 @@ func (r *PostgresStorage) GetValues() (map[string]float64, map[string]int64) {
 	// Request gauge models
 	if err := retryIfError(
 		func() error {
-			return r.db.Select(&gaugeModels, `SELECT * FROM gauge`)
+			return r.db.Select(&gaugeModels, `SELECT name, value FROM gauge`)
 		},
 	); err != nil {
 		zap.L().Error(err.Error())
@@ -95,7 +95,7 @@ func (r *PostgresStorage) GetValues() (map[string]float64, map[string]int64) {
 
 	// Request counter models
 	if err := retryIfError(func() error {
-		return r.db.Select(&counterModels, `SELECT * FROM counter`)
+		return r.db.Select(&counterModels, `SELECT name, value FROM counter`)
 	}); err != nil {
 		zap.L().Error(`Error while getting data from Postgres`, zap.Error(err))
 	}
@@ -128,7 +128,7 @@ func (r *PostgresStorage) GetCounterByName(name string) (*CounterModel, error) {
 
 	// Request counter model
 	if err := retryIfError(func() error {
-		return r.db.Get(&counterModel, `SELECT * FROM counter WHERE name = $1`, name)
+		return r.db.Get(&counterModel, `SELECT name, value FROM counter WHERE name = $1`, name)
 	}); err != nil {
 		zap.L().Error(`Error while operate with Postgres`, zap.Error(err))
 		return nil, err
@@ -150,7 +150,7 @@ func (r *PostgresStorage) GetGaugeByName(name string) (*GaugeModel, error) {
 
 	// Request counter model
 	if err := retryIfError(func() error {
-		return r.db.Get(&gaugeModel, `SELECT * FROM gauge WHERE name = $1`, name)
+		return r.db.Get(&gaugeModel, `SELECT name, value FROM gauge WHERE name = $1`, name)
 	}); err != nil {
 		zap.L().Error(`Error while getting data from Postgres`, zap.Error(err))
 		return nil, err
