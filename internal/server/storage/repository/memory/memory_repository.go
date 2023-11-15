@@ -7,7 +7,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/Jourloy/go-metrics-collector/internal/server/storage"
 	"go.uber.org/zap"
 )
 
@@ -35,7 +34,7 @@ type MemStorage struct {
 //
 // Returns:
 // - a pointer to a storage.Storage interface.
-func CreateRepository(opt Options) storage.Storage {
+func CreateRepository(opt Options) *MemStorage {
 	StoreInterval = opt.StoreInterval
 
 	gauge := make(map[string]float64)

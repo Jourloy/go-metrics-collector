@@ -38,7 +38,6 @@ func Start() {
 	flag.Parse()
 
 	s := repository.CreateRepository()
-	go s.StartTickers()
 
 	// Load HTML templates
 	r.LoadHTMLGlob(`templates/*`)

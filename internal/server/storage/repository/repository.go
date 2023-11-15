@@ -46,6 +46,13 @@ func envParse() {
 	}
 }
 
+// CreateRepository creates a storage object based on the provided configuration.
+//
+// This function parses the environment variables or flags, logs the created storage,
+// and then creates and returns the appropriate storage object based on the configuration.
+//
+// Return:
+// - The created storage object of type `storage.Storage`.
 func CreateRepository() storage.Storage {
 	// Parse environment variables
 	envParse()
@@ -58,6 +65,7 @@ func CreateRepository() storage.Storage {
 		zap.Bool(`Restore`, *Restore),
 	)
 
+	// Create Postgres storage
 	if *PostgresDSN != `` {
 		zap.L().Debug(`PostgresStorage created`)
 		return postgres.CreateRepository(postgres.Options{
@@ -65,10 +73,16 @@ func CreateRepository() storage.Storage {
 		})
 	}
 
+	// Create memory storage
 	zap.L().Debug(`MemStorage created`)
-	return memory.CreateRepository(memory.Options{
+	memStorage := memory.CreateRepository(memory.Options{
 		StoreInterval:   StoreInterval,
 		FileStoragePath: FileStoragePath,
 		Restore:         Restore,
 	})
+
+	// Start tickers for MemStorage
+	memStorage.StartTickers()
+
+	return memStorage
 }

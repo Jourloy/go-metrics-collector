@@ -16,7 +16,4 @@ type Storage interface {
 
 	// Return the value of a gauge by its name.
 	GetGaugeValue(name string) (float64, bool)
-
-	// StartTickers starts the tickers for the MemStorage.
-	StartTickers()
 }

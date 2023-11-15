@@ -4,7 +4,6 @@ import (
 	"slices"
 	"time"
 
-	"github.com/Jourloy/go-metrics-collector/internal/server/storage"
 	"github.com/avast/retry-go"
 	"github.com/jmoiron/sqlx"
 	_ "github.com/lib/pq"
@@ -44,7 +43,7 @@ type Options struct {
 //
 // Returns:
 // - a pointer to a storage.Storage interface.
-func CreateRepository(opt Options) storage.Storage {
+func CreateRepository(opt Options) *PostgresStorage {
 	var db *sqlx.DB
 
 	// Connect to Postgres
@@ -75,7 +74,7 @@ func CreateRepository(opt Options) storage.Storage {
 // StartTickers a not used here
 func (r *PostgresStorage) StartTickers() {}
 
-// GetValues returns the gauge and counter maps of the MemStorage.
+// GetValues returns the gauge and counter maps of the postgres database.
 //
 // Returns:
 // - map[string]float64
@@ -160,7 +159,7 @@ func (r *PostgresStorage) GetGaugeByName(name string) (*GaugeModel, error) {
 	return &gaugeModel, nil
 }
 
-// GetCounterValue retrieves the value of a counter by its name from the MemStorage.
+// GetCounterValue retrieves the value of a counter by its name from the postgres database.
 //
 // Parameters:
 // - name: the name of the counter.
@@ -224,7 +223,7 @@ func (r *PostgresStorage) UpdateCounterMetric(name string, value int64) int64 {
 	return updatedCounterModel.Value
 }
 
-// GetGaugeValue retrieves the value of a gauge by its name from the MemStorage.
+// GetGaugeValue retrieves the value of a gauge by its name from the postgres database.
 //
 // Parameters:
 // - name: a string representing the name of the gauge.
@@ -241,7 +240,7 @@ func (r *PostgresStorage) GetGaugeValue(name string) (float64, bool) {
 	return gaugeModel.Value, true
 }
 
-// UpdateGaugeMetric updates the gauge metric with the given name and value in the MemStorage.
+// UpdateGaugeMetric updates the gauge metric with the given name and value in the postgres database.
 //
 // Parameters:
 // - name: the name of the gauge metric (string)
