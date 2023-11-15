@@ -87,24 +87,15 @@ func logger() gin.HandlerFunc {
 		status := c.Writer.Status()
 		method := c.Request.Method
 		path := c.Request.URL.Path
+		responseSize := c.Writer.Size()
 
-		if method == `GET` {
-			responseSize := c.Writer.Size()
-			zap.L().Info(
-				method,
-				zap.String(`status`, strconv.Itoa(status)),
-				zap.Int(`size`, responseSize),
-				zap.String(`path`, path),
-				zap.Duration(`latency`, latency),
-			)
-		} else {
-			zap.L().Info(
-				method,
-				zap.String(`status`, strconv.Itoa(status)),
-				zap.String(`path`, path),
-				zap.Duration(`latency`, latency),
-			)
-		}
+		zap.L().Info(
+			method,
+			zap.String(`status`, strconv.Itoa(status)),
+			zap.Int(`size`, responseSize),
+			zap.String(`path`, path),
+			zap.Duration(`latency`, latency),
+		)
 	}
 }
 
