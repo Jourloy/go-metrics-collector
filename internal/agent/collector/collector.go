@@ -157,16 +157,7 @@ func (c *Collector) sendMetrics() {
 				ID:    name,
 				MType: `gauge`,
 				Value: &value,
-			})
-			if err == nil && status != nil {
-				if *status == 200 {
-					statuses.Success++
-				} else if *status == 500 {
-					statuses.Internal++
-				} else {
-					statuses.Fail++
-				}
-			}
+			}, &statuses)
 			return status, err
 		}); err != nil {
 			zap.L().Error(`Error while sending metrics to the server`, zap.Error(err))
@@ -180,16 +171,7 @@ func (c *Collector) sendMetrics() {
 				ID:    name,
 				MType: `counter`,
 				Delta: &value,
-			})
-			if err == nil && status != nil {
-				if *status == 200 {
-					statuses.Success++
-				} else if *status == 500 {
-					statuses.Internal++
-				} else {
-					statuses.Fail++
-				}
-			}
+			}, &statuses)
 			return status, err
 		}); err != nil {
 			zap.L().Error(`Error while sending metrics to the server`, zap.Error(err))
@@ -212,7 +194,7 @@ func (c *Collector) sendMetrics() {
 //
 // Parameters:
 // - metric: the metric to be sent
-func (c *Collector) sendPOST(metrics Metric) (*int, error) {
+func (c *Collector) sendPOST(metrics Metric, statuses *Statuses) (*int, error) {
 	b, _ := json.Marshal(metrics)
 
 	var gz bytes.Buffer
@@ -239,6 +221,16 @@ func (c *Collector) sendPOST(metrics Metric) (*int, error) {
 		return nil, err
 	}
 	defer res.Body.Close()
+
+	// Check status code
+	switch res.StatusCode {
+	case 200:
+		statuses.Success++
+	case 500:
+		statuses.Internal++
+	default:
+		statuses.Fail++
+	}
 
 	return &res.StatusCode, nil
 }
