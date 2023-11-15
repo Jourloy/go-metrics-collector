@@ -4,4 +4,5 @@ WORKDIR /app
 
 COPY . .
 
-RUN go mod download
+RUN go build -o /bin/agent /app/cmd/agent
+RUN go build -o /bin/server /app/cmd/server

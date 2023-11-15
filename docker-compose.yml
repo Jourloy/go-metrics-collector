@@ -16,9 +16,7 @@ services:
         container_name: metric-server
         build:
             context: .
-        volumes:
-            - .:/app
-        command: go run ./cmd/server
+        command: server
         env_file:
             - .env.server
         ports:
@@ -30,10 +28,9 @@ services:
         container_name: metric-agent
         build:
             context: .
-        volumes:
-            - .:/app
-        command: go run ./cmd/agent -a server:8080
+        command: agent
         env_file:
             - .env.agent
         depends_on:
             - postgres
+            - server
