@@ -88,6 +88,11 @@ func (a *AppSevice) UpdateMetricByParams(ctx *gin.Context) {
 		return
 	}
 
+	// Check metric type
+	if !a.checkMetricType(mType, ctx) {
+		return
+	}
+
 	// Update metric
 	metric, err := a.updateMetric(name, mType, nil, nil, &value)
 	if err != nil {
@@ -104,6 +109,7 @@ func (a *AppSevice) UpdateMetricByParams(ctx *gin.Context) {
 // Parameters:
 //   - ctx: the gin context.
 func (a *AppSevice) UpdateMetricByBody(ctx *gin.Context) {
+	// Check storage
 	if !a.checkStorage(ctx) {
 		return
 	}
@@ -113,6 +119,11 @@ func (a *AppSevice) UpdateMetricByBody(ctx *gin.Context) {
 	if err != nil {
 		zap.L().Error(err.Error())
 		ctx.String(http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Check metric type
+	if !a.checkMetricType(metric.MType, ctx) {
 		return
 	}
 
@@ -131,6 +142,7 @@ type Metrics []Metric
 
 // UpdateManyMetrics updates multiple metrics from butch request.
 func (a *AppSevice) UpdateManyMetrics(ctx *gin.Context) {
+	// Check storage
 	if !a.checkStorage(ctx) {
 		return
 	}
@@ -159,6 +171,11 @@ func (a *AppSevice) UpdateManyMetrics(ctx *gin.Context) {
 	}
 
 	for _, metric := range body {
+		// Check metric type
+		if !a.checkMetricType(metric.MType, ctx) {
+			continue
+		}
+
 		_, err := a.updateMetric(metric.ID, metric.MType, metric.Value, metric.Delta, nil)
 		if err != nil {
 			zap.L().Error(`Failed to update metric`, zap.Error(err))
@@ -173,7 +190,7 @@ func (a *AppSevice) UpdateManyMetrics(ctx *gin.Context) {
 //
 // Parameters:
 // - name: the name of the metric.
-// - mType: the type of the metric.
+// - mType: the type of the metric. Only `counter` and `gauge` are supported.
 // - value: the value of the metric (optional).
 // - delta: the delta value of the metric (optional).
 // - strValue: the string value of the metric (optional).
@@ -182,8 +199,6 @@ func (a *AppSevice) UpdateManyMetrics(ctx *gin.Context) {
 // - Metric: the updated metric.
 // - error: an error if the metric update fails.
 func (a *AppSevice) updateMetric(name string, mType string, value *float64, delta *int64, strValue *string) (Metric, error) {
-	var updated Metric
-
 	// Update counter metric
 	if mType == `counter` {
 		var v int64
@@ -203,7 +218,7 @@ func (a *AppSevice) updateMetric(name string, mType string, value *float64, delt
 
 		// Update metric
 		u := a.storage.UpdateCounterMetric(name, v)
-		updated = Metric{
+		updated := Metric{
 			ID:    name,
 			MType: mType,
 			Delta: &u,
@@ -213,34 +228,30 @@ func (a *AppSevice) updateMetric(name string, mType string, value *float64, delt
 	}
 
 	// Update gauge metric
-	if mType == `gauge` {
-		var v float64
+	var v float64
 
-		// Find `Value` value
-		if value != nil {
-			v = *value
-		} else if strValue != nil {
-			parsedValue, err := strconv.ParseFloat(*strValue, 64)
-			if err != nil {
-				return Metric{}, errGauge
-			}
-			v = parsedValue
-		} else {
+	// Find `Value` value
+	if value != nil {
+		v = *value
+	} else if strValue != nil {
+		parsedValue, err := strconv.ParseFloat(*strValue, 64)
+		if err != nil {
 			return Metric{}, errGauge
 		}
-
-		// Update metric
-		u := a.storage.UpdateGaugeMetric(name, v)
-		updated = Metric{
-			ID:    name,
-			MType: mType,
-			Value: &u,
-		}
-
-		return updated, nil
+		v = parsedValue
+	} else {
+		return Metric{}, errGauge
 	}
 
-	return Metric{}, errType
+	// Update metric
+	u := a.storage.UpdateGaugeMetric(name, v)
+	updated := Metric{
+		ID:    name,
+		MType: mType,
+		Value: &u,
+	}
+
+	return updated, nil
 }
 
 // ShowValue handles the request to show a metric value.
@@ -262,7 +273,12 @@ func (a *AppSevice) GetMetricByParams(ctx *gin.Context) {
 		return
 	}
 
-	// Get metric
+	// Check metric type
+	if !a.checkMetricType(mType, ctx) {
+		return
+	}
+
+	// Get counter metric
 	if mType == `counter` {
 		u, err := a.storage.GetCounterValue(name)
 		if !err {
@@ -273,7 +289,10 @@ func (a *AppSevice) GetMetricByParams(ctx *gin.Context) {
 
 		ctx.String(http.StatusOK, `%d`, u)
 		return
-	} else if mType == `gauge` {
+	}
+
+	// Get gauge metric
+	if mType == `gauge` {
 		u, err := a.storage.GetGaugeValue(name)
 		if !err {
 			zap.L().Error(errNotFound.Error())
@@ -283,10 +302,6 @@ func (a *AppSevice) GetMetricByParams(ctx *gin.Context) {
 
 		ctx.String(http.StatusOK, `%g`, u)
 		return
-	} else {
-		zap.L().Error(errType.Error())
-		ctx.String(http.StatusBadRequest, errType.Error())
-		return
 	}
 }
 
@@ -295,6 +310,7 @@ func (a *AppSevice) GetMetricByParams(ctx *gin.Context) {
 // Parameters:
 //   - ctx: the gin context.
 func (a *AppSevice) GetMetricByBody(ctx *gin.Context) {
+	// Check storage
 	if !a.checkStorage(ctx) {
 		return
 	}
@@ -307,8 +323,14 @@ func (a *AppSevice) GetMetricByBody(ctx *gin.Context) {
 		return
 	}
 
-	// Get metric
+	// Check metric type
+	if !a.checkMetricType(template.MType, ctx) {
+		return
+	}
+
 	var metric Metric
+
+	// Get counter metric
 	if template.MType == `counter` {
 		u, ok := a.storage.GetCounterValue(template.ID)
 		if !ok {
@@ -321,7 +343,10 @@ func (a *AppSevice) GetMetricByBody(ctx *gin.Context) {
 			MType: template.MType,
 			Delta: &u,
 		}
-	} else if template.MType == `gauge` {
+	}
+
+	// Get gauge metric
+	if template.MType == `gauge` {
 		u, ok := a.storage.GetGaugeValue(template.ID)
 		if !ok {
 			zap.L().Error(errNotFound.Error())
@@ -333,10 +358,6 @@ func (a *AppSevice) GetMetricByBody(ctx *gin.Context) {
 			MType: template.MType,
 			Value: &u,
 		}
-	} else {
-		zap.L().Error(errType.Error())
-		ctx.String(http.StatusBadRequest, errType.Error())
-		return
 	}
 
 	ctx.Header(`Content-Type`, `application/json`)
@@ -362,6 +383,16 @@ func (a *AppSevice) GetAllMetrics(ctx *gin.Context) {
 	ctx.HTML(http.StatusOK, `index.tmpl`, gin.H{
 		`merged`: merged,
 	})
+}
+
+func (a *AppSevice) checkMetricType(mType string, ctx *gin.Context) bool {
+	if mType != `counter` && mType != `gauge` {
+		zap.L().Error(errType.Error())
+		ctx.String(http.StatusBadRequest, errType.Error())
+		return false
+	}
+
+	return true
 }
 
 // checkStorage checks if the storage is initialized.
