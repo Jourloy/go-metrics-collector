@@ -149,7 +149,6 @@ func (a *AppSevice) UpdateManyMetrics(ctx *gin.Context) {
 		ctx.String(http.StatusBadRequest, errBody.Error())
 		return
 	}
-	defer ctx.Request.Body.Close()
 
 	// Unmarshal
 	var body Metrics
@@ -393,7 +392,6 @@ func (a *AppSevice) parseBody(ctx *gin.Context) (Metric, error) {
 	if err != nil {
 		return Metric{}, err
 	}
-	defer ctx.Request.Body.Close()
 
 	// Unmarshal
 	var body Metric
