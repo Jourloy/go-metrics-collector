@@ -83,7 +83,7 @@ func CreateRepository() (storage.Storage, bool) {
 	})
 
 	// Start tickers for MemStorage
-	go memStorage.StartTickers()
+	memStorage.StartTickers()
 
 	return memStorage, true
 }

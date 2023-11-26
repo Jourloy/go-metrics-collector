@@ -102,7 +102,7 @@ func CreateRepository(opt Options) *MemStorage {
 
 // StartTickers starts the tickers for the MemStorage.
 func (r *MemStorage) StartTickers() {
-	if SyncSave {
+	if SyncSave || !IsSave {
 		return
 	}
 
@@ -115,23 +115,22 @@ func (r *MemStorage) StartTickers() {
 	saveTicker := time.NewTicker(time.Duration(StoreInterval))
 	defer saveTicker.Stop()
 
-	for {
-		select {
-		case <-r.done:
-			return
-		case <-saveTicker.C:
-			if !SyncSave {
+	go func() {
+		for {
+			select {
+			case <-r.done:
+				return
+			case <-saveTicker.C:
 				r.SaveMetricsOnDisk()
 			}
 		}
-	}
+	}()
 }
 
 // SaveMetricsOnDisk saves the metrics in memory to a file on disk.
 func (r *MemStorage) SaveMetricsOnDisk() {
-	if !IsSave {
-		return
-	}
+	r.Mutex.Lock()
+	defer r.Mutex.Unlock()
 
 	if _, err := os.Stat(FileStoragePath); os.IsNotExist(err) {
 		zap.L().Warn(`File doesn't exist`)
