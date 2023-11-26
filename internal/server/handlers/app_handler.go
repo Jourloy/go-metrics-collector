@@ -21,11 +21,13 @@ func RegisterAppHandler(g *gin.RouterGroup, s storage.Storage) {
 	//
 	// So I add all possible routes for local process and return 400 if needed.
 
-	g.POST(`/value/`, appService.GetMetricByBody)
+	g.POST(`/value`, appService.GetMetricByBody)
+	g.POST(`/value/`, appService.GetMetricByBody) // Autotests need this, because they don't support autoredirects
 	g.GET(`/value/:type`, appService.GetMetricByParams)
 	g.GET(`/value/:type/:name`, appService.GetMetricByParams)
 
-	g.POST(`/update/`, appService.UpdateMetricByBody)
+	g.POST(`/update`, appService.UpdateMetricByBody)
+	g.POST(`/update/`, appService.UpdateMetricByBody) // Autotests need this, because they don't support autoredirects
 	g.POST(`/update/:type`, appService.UpdateMetricByParams)
 	g.POST(`/update/:type/:name`, appService.UpdateMetricByParams)
 	g.POST(`/update/:type/:name/:value`, appService.UpdateMetricByParams)
