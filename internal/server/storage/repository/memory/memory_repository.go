@@ -114,6 +114,7 @@ func (r *MemStorage) StartTickers() {
 
 	saveTicker := time.NewTicker(time.Duration(StoreInterval))
 	defer saveTicker.Stop()
+	defer r.CloseChannel()
 
 	go func() {
 		for {
@@ -125,6 +126,10 @@ func (r *MemStorage) StartTickers() {
 			}
 		}
 	}()
+}
+
+func (r *MemStorage) CloseChannel() {
+	r.done <- struct{}{}
 }
 
 // SaveMetricsOnDisk saves the metrics in memory to a file on disk.
