@@ -3,6 +3,10 @@ package collector
 import (
 	"bytes"
 	"compress/gzip"
+	"crypto/aes"
+	"crypto/cipher"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -21,6 +25,7 @@ var (
 	ServerAddress  = flag.String("a", `localhost:8080`, "Host of the server")
 	ReportInterval = flag.Int("r", 5, "Report Interval")
 	PollInterval   = flag.Int("p", 2, "Poll Interval")
+	Key            = flag.String(`k`, ``, `Key for hash`)
 )
 
 type Collector struct {
@@ -53,6 +58,10 @@ func envParse() {
 		if i, err := strconv.Atoi(reportENV); err == nil {
 			ReportInterval = &i
 		}
+	}
+
+	if keyENV, exist := os.LookupEnv(`KEY`); exist {
+		Key = &keyENV
 	}
 
 	zap.L().Debug(`Collector initialized`)
@@ -221,6 +230,11 @@ func (c *Collector) sendPOST(metrics Metric, statuses *Statuses) error {
 	req.Header.Set(`Accept-Encoding`, `gzip`)
 	req.Header.Set(`Content-Type`, `application/json`)
 
+	// Add hash header
+	if *Key != `` {
+		c.addHashHeader(req, gz.Bytes())
+	}
+
 	// Send the request
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -239,6 +253,35 @@ func (c *Collector) sendPOST(metrics Metric, statuses *Statuses) error {
 	}
 
 	return nil
+}
+
+// addHashHeader adds a hash header to the given http.Request and sets the value of the 'HashSHA256' header field.
+//
+// Parameters:
+// - req: a pointer to an http.Request object to which the hash header will be added.
+// - body: a byte slice representing the body of the request.
+func (c *Collector) addHashHeader(req *http.Request, body []byte) {
+	key := sha256.Sum256([]byte(*Key))
+
+	// Create cipher block
+	aesblock, err := aes.NewCipher(key[:])
+	if err != nil {
+		zap.L().Error(`Cannot create AES block`, zap.Error(err))
+		return
+	}
+
+	// Create GCM
+	aesgcm, err := cipher.NewGCM(aesblock)
+	if err != nil {
+		zap.L().Error(`Cannot create AES GCM`, zap.Error(err))
+		return
+	}
+
+	nonce := key[len(key)-aesgcm.NonceSize():]
+
+	// Encode body
+	h := aesgcm.Seal(nil, nonce, body, nil)
+	req.Header.Set(`HashSHA256`, hex.EncodeToString(h[:]))
 }
 
 // retryIfError retries the given function if it returns an error.

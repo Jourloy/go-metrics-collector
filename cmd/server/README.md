@@ -19,6 +19,7 @@ $ go run ./cmd/server
 - `-f` - File storage path. Default: `/tmp/metrics-db.json`. Alias for `FILE_STORAGE_PATH` in env.
 - `-i` - Store interval in seconds. Default: `300`. Alias for `STORE_INTERVAL` in env.
 - `-r` - Restore from file. Default: `true`. Alias for `RESTORE` in env.
+- `-k` - Key for hash ecnoding. Default empty. Alias for `KEY` in env.
 
 ## Test
 
