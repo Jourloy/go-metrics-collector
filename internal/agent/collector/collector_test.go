@@ -20,7 +20,7 @@ func TestCollector_StartTickers(t *testing.T) {
 			c := CreateCollector()
 
 			go c.StartTickers()
-			c.StopTickers()
+			c.CloseChannel()
 
 			_, ok := <-c.done
 			assert.False(t, ok)
@@ -43,7 +43,7 @@ func TestCollector_CollectMetrics(t *testing.T) {
 
 			time.Sleep(time.Duration(3) * time.Second)
 
-			c.StopTickers()
+			c.CloseChannel()
 
 			// Check metrics
 			assert.NotEqual(t, 0, len(c.counter))

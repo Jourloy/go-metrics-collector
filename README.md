@@ -1,32 +1,40 @@
-# go-musthave-metrics-tpl
+# go-metrics-collector
 
-Шаблон репозитория для трека «Сервер сбора метрик и алертинга».
+## Getting started
 
-## Начало работы
+### env
 
-1. Склонируйте репозиторий в любую подходящую директорию на вашем компьютере.
-2. В корне репозитория выполните команду `go mod init <name>` (где `<name>` — адрес вашего репозитория на GitHub без префикса `https://`) для создания модуля.
+For start docker you should create `.env` file (look into `.env.template` for more info).
 
-## Обновление шаблона
+For server you should create `.env.server` and for agent you should create `.env.agent` files.
 
-Чтобы иметь возможность получать обновления автотестов и других частей шаблона, выполните команду:
+### Running apps
 
-```
-git remote add -m main template https://github.com/Yandex-Practicum/go-musthave-metrics-tpl.git
-```
+About agent and server read more information in **cmd** folder.
 
-Для обновления кода автотестов выполните команду:
+### Docker
 
-```
-git fetch template && git checkout template/main .github
+```bash
+$ docker-compose up -d
 ```
 
-Затем добавьте полученные изменения в свой репозиторий.
+## Changelog
 
-## Запуск автотестов
+You can find changelog in `/internal/README.md` file.
 
-Для успешного запуска автотестов называйте ветки `iter<number>`, где `<number>` — порядковый номер инкремента. Например, в ветке с названием `iter4` запустятся автотесты для инкрементов с первого по четвёртый.
+## Template update
 
-При мёрже ветки с инкрементом в основную ветку `main` будут запускаться все автотесты.
+Add template in remote:
 
-Подробнее про локальный и автоматический запуск читайте в [README автотестов](https://github.com/Yandex-Practicum/go-autotests).
+```bash
+$ git remote add -m main template https://github.com/Yandex-Practicum/go-musthave-metrics-tpl.git
+```
+
+For autotests code update:
+
+```bash 
+$ git fetch template 
+$ git checkout template/main .github
+```
+
+[README autotests](https://github.com/Yandex-Practicum/go-autotests).

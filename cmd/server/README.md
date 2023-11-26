@@ -12,6 +12,14 @@ Now used only memory storage.
 $ go run ./cmd/server
 ```
 
+### Possible flags
+
+- `-a` - Host of the server. Default: `localhost:8080`. Alias for `ADDRESS` in env.
+- `-d` - Postgres DSN. Default: `''`. Alias for `DATABASE_DSN` in env.
+- `-f` - File storage path. Default: `/tmp/metrics-db.json`. Alias for `FILE_STORAGE_PATH` in env.
+- `-i` - Store interval in seconds. Default: `300`. Alias for `STORE_INTERVAL` in env.
+- `-r` - Restore from file. Default: `true`. Alias for `RESTORE` in env.
+
 ## Test
 
 ```bash
