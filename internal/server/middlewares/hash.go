@@ -51,6 +51,14 @@ func HashDecode() gin.HandlerFunc {
 		}
 		c.Writer = writer
 
+		// Read body
+		b, err := io.ReadAll(c.Request.Body)
+		if err != nil {
+			zap.L().Error(`Cannot read body`, zap.Error(err))
+			panic(err)
+		}
+		c.Request.Body = io.NopCloser(bytes.NewBuffer(b))
+
 		// Check key
 		if *Key == `` {
 			zap.L().Debug(`Key is empty`)
@@ -65,15 +73,6 @@ func HashDecode() gin.HandlerFunc {
 			c.Next()
 			return
 		}
-
-		// Read body
-		b, err := io.ReadAll(c.Request.Body)
-		if err != nil {
-			zap.L().Debug(`Body is empty`)
-			c.Next()
-			return
-		}
-		c.Request.Body = io.NopCloser(bytes.NewBuffer(b))
 
 		key := sha256.Sum256([]byte(*Key))
 
