@@ -63,6 +63,7 @@ func HashDecode() gin.HandlerFunc {
 		if *Key == `` {
 			zap.L().Debug(`Key is empty`)
 			c.Next()
+			writer.ResponseWriter.Write(writer.Body.Bytes())
 			return
 		}
 
@@ -71,6 +72,7 @@ func HashDecode() gin.HandlerFunc {
 		if h == `` {
 			zap.L().Debug(`Header is empty`)
 			c.Next()
+			writer.ResponseWriter.Write(writer.Body.Bytes())
 			return
 		}
 
@@ -105,5 +107,7 @@ func HashDecode() gin.HandlerFunc {
 		// Encode body and update header
 		newH := aesgcm.Seal(nil, nonce, writer.Body.Bytes(), nil)
 		c.Header(`HashSHA256`, hex.EncodeToString(newH[:]))
+
+		writer.ResponseWriter.Write(writer.Body.Bytes())
 	}
 }

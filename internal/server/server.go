@@ -25,8 +25,8 @@ func Start() {
 	// Set middlewares
 	r.Use(gin.Recovery())           // 500 instead of panic
 	r.Use(middlewares.Logger())     // Logger
-	r.Use(middlewares.HashDecode()) // Hash
 	r.Use(middlewares.GzipDecode()) // Gzip
+	r.Use(middlewares.HashDecode()) // Hash
 
 	// Check if ADDRESS environment variable is set and assign it to Host
 	if hostENV, exist := os.LookupEnv(`ADDRESS`); exist {
