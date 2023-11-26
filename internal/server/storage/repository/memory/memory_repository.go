@@ -113,8 +113,6 @@ func (r *MemStorage) StartTickers() {
 	)
 
 	saveTicker := time.NewTicker(time.Duration(StoreInterval))
-	defer saveTicker.Stop()
-	defer r.CloseChannel()
 
 	go func() {
 		for {
@@ -128,12 +126,9 @@ func (r *MemStorage) StartTickers() {
 	}()
 }
 
-func (r *MemStorage) CloseChannel() {
-	r.done <- struct{}{}
-}
-
 // SaveMetricsOnDisk saves the metrics in memory to a file on disk.
 func (r *MemStorage) SaveMetricsOnDisk() {
+	zap.L().Debug(`Saving metrics on disk...`)
 	r.Mutex.Lock()
 	defer r.Mutex.Unlock()
 
@@ -152,9 +147,6 @@ func (r *MemStorage) SaveMetricsOnDisk() {
 		return
 	}
 	defer file.Close()
-
-	r.Mutex.Lock()
-	defer r.Mutex.Unlock()
 
 	data := make(map[string]any)
 	data[`gauge`] = r.gauge
