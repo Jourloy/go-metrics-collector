@@ -9,15 +9,17 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"math/rand"
 	"net/http"
 	"os"
 	"runtime"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/avast/retry-go"
+	"github.com/shirou/gopsutil/v3/cpu"
+	"github.com/shirou/gopsutil/v3/mem"
 	"go.uber.org/zap"
 )
 
@@ -26,10 +28,12 @@ var (
 	ReportInterval = flag.Int("r", 5, "Report Interval")
 	PollInterval   = flag.Int("p", 2, "Poll Interval")
 	Key            = flag.String(`k`, ``, `Key for hash`)
+	RateLimit      = flag.Int(`i`, 0, `Rate limit. 0 - no limit`)
 )
 
 type Collector struct {
-	done    chan struct{}
+	done chan struct{}
+	sync.Mutex
 	gauge   map[string]float64
 	counter map[string]int64
 }
@@ -62,6 +66,12 @@ func envParse() {
 
 	if keyENV, exist := os.LookupEnv(`KEY`); exist {
 		Key = &keyENV
+	}
+
+	if rateENV, exist := os.LookupEnv(`RATE_LIMIT`); exist {
+		if i, err := strconv.Atoi(rateENV); err == nil {
+			ReportInterval = &i
+		}
 	}
 
 	zap.L().Debug(`Collector initialized`)
@@ -99,6 +109,7 @@ func (c *Collector) StartTickers() {
 			return
 		case <-collectTicker.C:
 			c.collectMetric()
+			c.collectPsutilMetric()
 		case <-sendTicker.C:
 			go c.sendMetrics()
 		}
@@ -112,6 +123,8 @@ func (c *Collector) CloseChannel() {
 }
 
 // collectMetric collects various metrics and stores them in the gauge and counter maps.
+//
+// For mentor: This is already gorutine, looks like worker, so I don't change code below
 func (c *Collector) collectMetric() {
 	var memStats runtime.MemStats
 	runtime.ReadMemStats(&memStats)
@@ -150,66 +163,105 @@ func (c *Collector) collectMetric() {
 	zap.L().Debug(`Metrics collected`)
 }
 
+func (c *Collector) collectPsutilMetric() {
+	v, err := mem.VirtualMemory()
+	if err != nil {
+		zap.L().Error(`Cannot get virtual memory`, zap.Error(err))
+		return
+	}
+
+	cp, err := cpu.Times(true)
+	if err != nil {
+		zap.L().Error(`Cannot get cpu info`, zap.Error(err))
+		return
+	}
+
+	c.gauge[`TotalMemory`] = float64(v.Total)
+	c.gauge[`FreeMemory`] = float64(v.Free)
+
+	for i := 0; i < len(cp); i++ {
+		c.gauge[`CPUutilization`+strconv.Itoa(i)] = float64(cp[i].System)
+	}
+}
+
 type Statuses struct {
 	Success  int
 	Internal int
 	Fail     int
 }
 
-// sendMetrics sends the metrics to the server.
 func (c *Collector) sendMetrics() {
-	statuses := Statuses{}
+	c.Lock()
+	defer c.Unlock()
 
-	// Send gauge metrics
-	for name, value := range c.gauge {
+	// Create a channel to send metrics
+	metric := make(chan Metric)
+
+	jobs := len(c.gauge) + len(c.counter)
+	rate := jobs
+
+	if *RateLimit > 0 {
+		rate = *RateLimit
+	}
+
+	// Launch workers
+	for i := 0; i < rate; i++ {
+		zap.L().Debug(`Metric worker launched`, zap.Int(`id`, i))
+		go c.sendMetricWorker(i, metric)
+	}
+
+	// Add gauge metrics
+	for i, v := range c.gauge {
+		metric <- Metric{
+			ID:    i,
+			MType: `gauge`,
+			Value: &v,
+		}
+	}
+
+	// Add counter metrics
+	for i, v := range c.counter {
+		metric <- Metric{
+			ID:    i,
+			MType: `counter`,
+			Delta: &v,
+		}
+	}
+
+	// Wait for all metrics to be sent
+	close(metric)
+}
+
+// sendMetricWorker is a function that processes metrics from a channel and sends them to a remote server.
+//
+// Parameters:
+//   - id: an integer representing the worker's ID.
+//   - metric: a channel that receives Metric objects.
+func (c *Collector) sendMetricWorker(id int, metric <-chan Metric) {
+	for m := range metric {
+		var code = 0
 		if err := c.retryIfError(
 			func() error {
-				return c.sendPOST(Metric{
-					ID:    name,
-					MType: `gauge`,
-					Value: &value,
-				}, &statuses)
+				c, err := c.sendPOST(m, nil)
+				code = c
+				return err
 			},
 		); err != nil {
 			zap.L().Error(err.Error())
 		}
+
+		zap.L().Debug(`Metric worker finished`, zap.Int(`id`, id), zap.Int(`code`, code), zap.String(`id`, m.ID))
 	}
-
-	// Send counter metrics
-	for name, value := range c.counter {
-		if err := c.retryIfError(
-			func() error {
-				return c.sendPOST(Metric{
-					ID:    name,
-					MType: `counter`,
-					Delta: &value,
-				}, &statuses)
-			},
-		); err != nil {
-			zap.L().Error(err.Error())
-		}
-	}
-
-	// Reset poll count
-	c.counter[`PollCount`] = 0
-
-	// Log sent metrics
-	zap.L().Debug(
-		`Metrics sent to the server`,
-		zap.String(`Success`, fmt.Sprintf(`%d`, statuses.Success)),
-		zap.String(`Internal`, fmt.Sprintf(`%d`, statuses.Internal)),
-		zap.String(`Fail`, fmt.Sprintf(`%d`, statuses.Fail)),
-	)
 }
 
 // sendPOST sends a POST request to the server with the given metric.
 //
 // Parameters:
 // - metric: the metric to be sent
-func (c *Collector) sendPOST(metrics Metric, statuses *Statuses) error {
+func (c *Collector) sendPOST(metrics Metric, statuses *Statuses) (int, error) {
 	b, err := json.Marshal(metrics)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	var gz bytes.Buffer
@@ -222,7 +274,7 @@ func (c *Collector) sendPOST(metrics Metric, statuses *Statuses) error {
 	// Create the request
 	req, err := http.NewRequest(http.MethodPost, `http://`+*ServerAddress+`/update/`, &gz)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	// Set headers
@@ -238,21 +290,11 @@ func (c *Collector) sendPOST(metrics Metric, statuses *Statuses) error {
 	// Send the request
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	defer res.Body.Close()
 
-	// Check status code
-	switch res.StatusCode {
-	case 200:
-		statuses.Success++
-	case 500:
-		statuses.Internal++
-	default:
-		statuses.Fail++
-	}
-
-	return nil
+	return res.StatusCode, nil
 }
 
 // addHashHeader adds a hash header to the given http.Request and sets the value of the 'HashSHA256' header field.
