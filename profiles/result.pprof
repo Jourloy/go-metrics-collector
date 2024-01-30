@@ -1,0 +1,93 @@
+goroutine 14 [running]:
+runtime/pprof.writeGoroutineStacks({0x1e57ff344e8, 0xc000090378})
+	C:/Program Files/Go/src/runtime/pprof/pprof.go:703 +0x6a
+runtime/pprof.writeGoroutine({0x1e57ff344e8?, 0xc000090378?}, 0x0?)
+	C:/Program Files/Go/src/runtime/pprof/pprof.go:692 +0x25
+runtime/pprof.(*Profile).WriteTo(0x939d20?, {0x1e57ff344e8?, 0xc000090378?}, 0xc?)
+	C:/Program Files/Go/src/runtime/pprof/pprof.go:329 +0x146
+net/http/pprof.handler.ServeHTTP({0x98ee00, 0x9}, {0x1e57ff344b8, 0xc000090378}, 0xb5c300?)
+	C:/Program Files/Go/src/net/http/pprof/pprof.go:267 +0x4a8
+github.com/gin-contrib/pprof.RouteRegister.WrapH.func9(0xc00006c500)
+	C:/Users/user/go/pkg/mod/github.com/gin-gonic/gin@v1.9.1/utils.go:49 +0x62
+github.com/gin-gonic/gin.(*Context).Next(...)
+	C:/Users/user/go/pkg/mod/github.com/gin-gonic/gin@v1.9.1/context.go:174
+github.com/Jourloy/go-metrics-collector/internal/server/middlewares.HashDecode.func1(0xc00006c500)
+	D:/Coding/go-metrics-collector/internal/server/middlewares/hash.go:65 +0xb1a
+github.com/gin-gonic/gin.(*Context).Next(0xc00006c500)
+	C:/Users/user/go/pkg/mod/github.com/gin-gonic/gin@v1.9.1/context.go:174 +0x2b
+github.com/Jourloy/go-metrics-collector/internal/server.Start.GzipDecode.func2(0xc00006c500)
+	D:/Coding/go-metrics-collector/internal/server/middlewares/gzip.go:70 +0x252
+github.com/gin-gonic/gin.(*Context).Next(0xc00006c500)
+	C:/Users/user/go/pkg/mod/github.com/gin-gonic/gin@v1.9.1/context.go:174 +0x2b
+github.com/Jourloy/go-metrics-collector/internal/server.Start.Logger.func1(0xc00006c500)
+	D:/Coding/go-metrics-collector/internal/server/middlewares/logger.go:32 +0x49
+github.com/gin-gonic/gin.(*Context).Next(...)
+	C:/Users/user/go/pkg/mod/github.com/gin-gonic/gin@v1.9.1/context.go:174
+github.com/gin-gonic/gin.CustomRecoveryWithWriter.func1(0xc00006c500)
+	C:/Users/user/go/pkg/mod/github.com/gin-gonic/gin@v1.9.1/recovery.go:102 +0x7a
+github.com/gin-gonic/gin.(*Context).Next(...)
+	C:/Users/user/go/pkg/mod/github.com/gin-gonic/gin@v1.9.1/context.go:174
+github.com/gin-gonic/gin.(*Engine).handleHTTPRequest(0xc0006044e0, 0xc00006c500)
+	C:/Users/user/go/pkg/mod/github.com/gin-gonic/gin@v1.9.1/gin.go:620 +0x65b
+github.com/gin-gonic/gin.(*Engine).ServeHTTP(0xc0006044e0, {0xa88530?, 0xc00007c0e0}, 0xc00006c200)
+	C:/Users/user/go/pkg/mod/github.com/gin-gonic/gin@v1.9.1/gin.go:576 +0x1dd
+net/http.serverHandler.ServeHTTP({0xc00046c0c0?}, {0xa88530?, 0xc00007c0e0?}, 0x6?)
+	C:/Program Files/Go/src/net/http/server.go:2938 +0x8e
+net/http.(*conn).serve(0xc0000f8360, {0xa89448, 0xc000609a40})
+	C:/Program Files/Go/src/net/http/server.go:2009 +0x5f4
+created by net/http.(*Server).Serve in goroutine 1
+	C:/Program Files/Go/src/net/http/server.go:3086 +0x5cb
+
+goroutine 1 [IO wait, 4 minutes]:
+internal/poll.runtime_pollWait(0x1e500234be0, 0x72)
+	C:/Program Files/Go/src/runtime/netpoll.go:343 +0x85
+internal/poll.(*pollDesc).wait(0x0?, 0x0?, 0x0)
+	C:/Program Files/Go/src/internal/poll/fd_poll_runtime.go:84 +0x27
+internal/poll.execIO(0xc000623198, 0xc00058fa00)
+	C:/Program Files/Go/src/internal/poll/fd_windows.go:175 +0xe6
+internal/poll.(*FD).acceptOne(0xc000623180, 0x228, {0xc000146c30?, 0xc000600000?, 0x9d8558?}, 0xc00058fb10?)
+	C:/Program Files/Go/src/internal/poll/fd_windows.go:944 +0x67
+internal/poll.(*FD).Accept(0xc000623180, 0xc000161bd8)
+	C:/Program Files/Go/src/internal/poll/fd_windows.go:978 +0x1bc
+net.(*netFD).accept(0xc000623180)
+	C:/Program Files/Go/src/net/fd_windows.go:166 +0x54
+net.(*TCPListener).accept(0xc00060eea0)
+	C:/Program Files/Go/src/net/tcpsock_posix.go:152 +0x1e
+net.(*TCPListener).Accept(0xc00060eea0)
+	C:/Program Files/Go/src/net/tcpsock.go:315 +0x30
+net/http.(*Server).Serve(0xc00014c000, {0xa888c0, 0xc00060eea0})
+	C:/Program Files/Go/src/net/http/server.go:3056 +0x364
+net/http.(*Server).ListenAndServe(0xc00014c000)
+	C:/Program Files/Go/src/net/http/server.go:2985 +0x71
+net/http.ListenAndServe(...)
+	C:/Program Files/Go/src/net/http/server.go:3239
+github.com/gin-gonic/gin.(*Engine).Run(0xc0006044e0, {0xc00058fed0, 0x1, 0x1})
+	C:/Users/user/go/pkg/mod/github.com/gin-gonic/gin@v1.9.1/gin.go:386 +0x205
+github.com/Jourloy/go-metrics-collector/internal/server.Start()
+	D:/Coding/go-metrics-collector/internal/server/server.go:62 +0x249
+main.main()
+	D:/Coding/go-metrics-collector/cmd/server/main.go:22 +0x8a
+
+goroutine 13 [select, 4 minutes]:
+github.com/Jourloy/go-metrics-collector/internal/server/storage/repository/memory.(*MemStorage).StartTickers.func1()
+	D:/Coding/go-metrics-collector/internal/server/storage/repository/memory/memory_repository.go:119 +0x70
+created by github.com/Jourloy/go-metrics-collector/internal/server/storage/repository/memory.(*MemStorage).StartTickers in goroutine 1
+	D:/Coding/go-metrics-collector/internal/server/storage/repository/memory/memory_repository.go:117 +0x214
+
+goroutine 25 [IO wait]:
+internal/poll.runtime_pollWait(0x1e500234ae8, 0x72)
+	C:/Program Files/Go/src/runtime/netpoll.go:343 +0x85
+internal/poll.(*pollDesc).wait(0x0?, 0x0?, 0x0)
+	C:/Program Files/Go/src/internal/poll/fd_poll_runtime.go:84 +0x27
+internal/poll.execIO(0xc000623418, 0x9d8b68)
+	C:/Program Files/Go/src/internal/poll/fd_windows.go:175 +0xe6
+internal/poll.(*FD).Read(0xc000623400, {0xc00046c0d1, 0x1, 0x1})
+	C:/Program Files/Go/src/internal/poll/fd_windows.go:436 +0x2b1
+net.(*netFD).Read(0xc000623400, {0xc00046c0d1?, 0x0?, 0x0?})
+	C:/Program Files/Go/src/net/fd_posix.go:55 +0x25
+net.(*conn).Read(0xc000616218, {0xc00046c0d1?, 0x0?, 0x0?})
+	C:/Program Files/Go/src/net/net.go:179 +0x45
+net/http.(*connReader).backgroundRead(0xc00046c0c0)
+	C:/Program Files/Go/src/net/http/server.go:683 +0x37
+created by net/http.(*connReader).startBackgroundRead in goroutine 14
+	C:/Program Files/Go/src/net/http/server.go:679 +0xba
