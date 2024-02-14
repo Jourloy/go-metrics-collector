@@ -1,3 +1,4 @@
+// Package memory provide interface for store data in memory
 package memory
 
 import (

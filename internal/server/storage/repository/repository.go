@@ -1,3 +1,4 @@
+// Package repository init env and init main storage repository
 package repository
 
 import (

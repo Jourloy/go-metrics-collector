@@ -1,11 +1,13 @@
+// Package agent load env and init collector agent
 package agent
 
 import (
 	"flag"
 
-	"github.com/Jourloy/go-metrics-collector/internal/agent/collector"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
+
+	"github.com/Jourloy/go-metrics-collector/internal/agent/collector"
 )
 
 // Start initializes the application.

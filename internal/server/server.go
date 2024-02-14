@@ -1,3 +1,5 @@
+// Package server init gin server, add middlewares, init database,
+// add start server
 package server
 
 import (

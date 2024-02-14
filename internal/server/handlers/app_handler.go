@@ -1,3 +1,4 @@
+// Package handlers provide func for register endpoints
 package handlers
 
 import (
@@ -6,7 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// Registers the app handler in the specified gin.Engine and uses the provided storage.
+// RegisterAppHandler the app handler in the specified gin.Engine and uses the provided storage.
 func RegisterAppHandler(g *gin.RouterGroup, s storage.Storage) {
 	appService := app.GetAppSevice(s)
 

@@ -1,3 +1,4 @@
+// Package postgres provide interface for store data in Postgres
 package postgres
 
 import (
