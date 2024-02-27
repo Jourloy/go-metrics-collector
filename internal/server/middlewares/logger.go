@@ -1,3 +1,4 @@
+// Package middlewares provide custom middlewares for Gin
 package middlewares
 
 import (
@@ -8,7 +9,7 @@ import (
 	"go.uber.org/zap"
 )
 
-// logger is a middleware function that logs the details of each incoming request.
+// Logger is a middleware function that logs the details of each incoming request.
 //
 // It takes a gin.Context as a parameter and returns a gin.HandlerFunc.
 // The gin.HandlerFunc is a function that handles the request and response flow.

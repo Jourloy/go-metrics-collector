@@ -1,3 +1,8 @@
+// Package collector collect OS metrics and send they to the server
+//
+// Get collector agent: `agent := collector.CreateCollector()`
+//
+// Start collector: agent.StartTickers()
 package collector
 
 import (

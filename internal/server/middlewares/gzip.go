@@ -23,7 +23,7 @@ func (r gzipBodyWriter) Write(b []byte) (int, error) {
 	return r.Body.Write(b)
 }
 
-// gzipMiddleware is a middleware function that compresses and decompresses gzipped request and response bodies.
+// GzipDecode is a middleware function that compresses and decompresses gzipped request and response bodies.
 //
 // Parameters:
 //   - ctx: the gin context.

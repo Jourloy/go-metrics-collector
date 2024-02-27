@@ -1,3 +1,4 @@
+// Package app collect metrics and store in database
 package app
 
 import (
@@ -44,7 +45,7 @@ func GetAppSevice(s storage.Storage) *AppSevice {
 	}
 }
 
-// Live returns the response "Live" with a status code of 200 OK.
+// Pong returns the response "Live" with a status code of 200 OK.
 //
 // Parameters:
 //   - ctx: the gin context.
@@ -255,7 +256,7 @@ func (a *AppSevice) updateMetric(name string, mType string, value *float64, delt
 	return updated, nil
 }
 
-// ShowValue handles the request to show a metric value.
+// GetMetricByParams handles the request to show a metric value.
 //
 // Parameters:
 //   - ctx: the gin context.

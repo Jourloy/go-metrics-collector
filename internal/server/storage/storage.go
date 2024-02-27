@@ -1,6 +1,7 @@
+// Package storage provide interface for store data in memory or postgres
 package storage
 
-// Interface for work with storage
+// Storage interface for work with storage
 type Storage interface {
 	// Update the gauge metric with the given name and value in the MemStorage struct.
 	UpdateGaugeMetric(name string, value float64) float64

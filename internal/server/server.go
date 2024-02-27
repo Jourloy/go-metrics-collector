@@ -1,3 +1,5 @@
+// Package server init gin server, add middlewares, init database,
+// add start server
 package server
 
 import (
@@ -5,12 +7,14 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/gin-contrib/pprof"
+	"github.com/gin-gonic/gin"
+	"go.uber.org/zap"
+
 	"github.com/Jourloy/go-metrics-collector/internal/server/handlers"
 	"github.com/Jourloy/go-metrics-collector/internal/server/middlewares"
 	"github.com/Jourloy/go-metrics-collector/internal/server/storage"
 	"github.com/Jourloy/go-metrics-collector/internal/server/storage/repository"
-	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 )
 
 var (
@@ -50,6 +54,7 @@ func Start() {
 	r.LoadHTMLGlob(`templates/*`)
 
 	// Initiate router groups
+	pprof.Register(r)
 	appGroup := r.Group(`/`)
 
 	// Register application, collector, and value handlers
