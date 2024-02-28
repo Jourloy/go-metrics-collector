@@ -19,7 +19,7 @@ import (
 
 var (
 	Host = flag.String(`a`, `localhost:8080`, `Host of the server`)
-	Key  = flag.String(`k`, ``, `Key for cipher`)
+	Key  = flag.String(`key`, ``, `Key for cipher`)
 )
 
 // Start initiates the application.
