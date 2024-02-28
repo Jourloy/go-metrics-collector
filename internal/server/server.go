@@ -3,15 +3,19 @@
 package server
 
 import (
+	"context"
 	"encoding/json"
 	"flag"
 	"io"
+	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
-	"go.uber.org/zap"
 
 	"github.com/Jourloy/go-metrics-collector/internal/server/handlers"
 	"github.com/Jourloy/go-metrics-collector/internal/server/middlewares"
@@ -86,13 +90,30 @@ func Start() {
 	// Register application, collector, and value handlers
 	handlers.RegisterAppHandler(appGroup, s)
 
-	// Run the server on the specified host
-	if err := r.Run(*Host); err != nil {
-		// Handle server closed error
-		if err == http.ErrServerClosed {
-			zap.L().Info(`Server closed`)
-		} else {
+	srv := &http.Server{
+		Addr:    *Host,
+		Handler: r,
+	}
+	go func() {
+		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
 			panic(err)
 		}
+	}()
+
+	quit := make(chan os.Signal)
+	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
+	<-quit
+	log.Println("Shutdown Server ...")
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := srv.Shutdown(ctx); err != nil {
+		panic(err)
 	}
+	// catching ctx.Done(). timeout of 5 seconds.
+	select {
+	case <-ctx.Done():
+		log.Println("timeout of 5 seconds.")
+	}
+	log.Println("Server exiting")
 }
