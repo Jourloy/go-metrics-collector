@@ -3,7 +3,9 @@
 package server
 
 import (
+	"encoding/json"
 	"flag"
+	"io"
 	"net/http"
 	"os"
 
@@ -22,8 +24,31 @@ var (
 	Key  = flag.String(`key`, ``, `Key for cipher`)
 )
 
+type ServerConfig struct {
+	Address       string `json:"address"`
+	Restore       bool   `json:"restore"`
+	StoreInterval string `json:"store_interval"`
+	StoreFile     string `json:"store_file"`
+	DatabaseDSN   string `json:"database_dsn"`
+	CryptoKey     string `json:"crypto_key"`
+}
+
+func readConfig() {
+	if file, err := os.Open(`./server.config.json`); err == nil {
+		defer file.Close()
+
+		b, _ := io.ReadAll(file)
+		var config ServerConfig
+		json.Unmarshal(b, &config)
+
+		Host = &config.Address
+	}
+}
+
 // Start initiates the application.
 func Start() {
+	readConfig()
+
 	// Initiate handlers
 	r := gin.New()
 

@@ -2,7 +2,9 @@
 package repository
 
 import (
+	"encoding/json"
 	"flag"
+	"io"
 	"os"
 	"strconv"
 	"time"
@@ -20,6 +22,15 @@ var (
 	Restore           = flag.Bool(`r`, true, `Restore from file`)
 	StoreIntervalFlag = flag.Int(`i`, 300, `Store interval in seconds`) // Cannot use flag.Duration because Yandex's autotest send int
 )
+
+type ServerConfig struct {
+	Address       string `json:"address"`
+	Restore       bool   `json:"restore"`
+	StoreInterval string `json:"store_interval"`
+	StoreFile     string `json:"store_file"`
+	DatabaseDSN   string `json:"database_dsn"`
+	CryptoKey     string `json:"crypto_key"`
+}
 
 // envParse initializes the StoreInterval, FileStoragePath, and Restore
 // variables by checking for corresponding environment variables.
@@ -45,6 +56,19 @@ func envParse() {
 			Restore = &b
 		}
 	}
+
+	if file, err := os.Open(`./server.config.json`); err == nil {
+		defer file.Close()
+
+		b, _ := io.ReadAll(file)
+		var config ServerConfig
+		json.Unmarshal(b, &config)
+
+		PostgresDSN = &config.DatabaseDSN
+		Restore = &config.Restore
+		FileStoragePath = &config.StoreFile
+	}
+
 }
 
 // CreateRepository creates a storage object based on the provided configuration.
