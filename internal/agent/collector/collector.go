@@ -14,6 +14,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"flag"
+	"io"
 	"math/rand"
 	"net/http"
 	"os"
@@ -50,6 +51,13 @@ type Metric struct {
 	Value *float64 `json:"value,omitempty"` // Value if metric is a gauge
 }
 
+type AgentConfig struct {
+	Address        string `json:"address"`
+	ReportInterval string `json:"report_interval"`
+	PollInterval   string `json:"poll_interval"`
+	CryptoKey      string `json:"crypto_key"`
+}
+
 // envParse initializes the ServerAddress, PollInterval, and ReportInterval
 // variables by checking for corresponding environment variables.
 func envParse() {
@@ -75,6 +83,24 @@ func envParse() {
 
 	if rateENV, exist := os.LookupEnv(`RATE_LIMIT`); exist {
 		if i, err := strconv.Atoi(rateENV); err == nil {
+			ReportInterval = &i
+		}
+	}
+
+	if file, err := os.Open(`./agent.config.json`); err == nil {
+		defer file.Close()
+
+		b, _ := io.ReadAll(file)
+		var config AgentConfig
+		json.Unmarshal(b, &config)
+
+		ServerAddress = &config.Address
+
+		if i, err := strconv.Atoi(config.PollInterval); err == nil {
+			PollInterval = &i
+		}
+
+		if i, err := strconv.Atoi(config.ReportInterval); err == nil {
 			ReportInterval = &i
 		}
 	}
