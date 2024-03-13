@@ -14,6 +14,7 @@ import (
 	"syscall"
 	"time"
 
+	limit "github.com/bu/gin-access-limit"
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
 
@@ -24,8 +25,9 @@ import (
 )
 
 var (
-	Host = flag.String(`a`, `localhost:8080`, `Host of the server`)
-	Key  = flag.String(`key`, ``, `Key for cipher`)
+	Host          = flag.String(`a`, `localhost:8080`, `Host of the server`)
+	Key           = flag.String(`key`, ``, `Key for cipher`)
+	TrustedSubnet = flag.String(`t`, ``, `CIDR`)
 )
 
 type ServerConfig struct {
@@ -35,6 +37,7 @@ type ServerConfig struct {
 	StoreFile     string `json:"store_file"`
 	DatabaseDSN   string `json:"database_dsn"`
 	CryptoKey     string `json:"crypto_key"`
+	TrustedSubnet string `json:"trusted_subnet"`
 }
 
 func readConfig() {
@@ -43,15 +46,20 @@ func readConfig() {
 
 		b, _ := io.ReadAll(file)
 		var config ServerConfig
-		json.Unmarshal(b, &config)
+		err := json.Unmarshal(b, &config)
+		if err != nil {
+			panic(err)
+		}
 
 		Host = &config.Address
+		TrustedSubnet = &config.TrustedSubnet
 	}
 }
 
 // Start initiates the application.
 func Start() {
 	readConfig()
+	flag.Parse()
 
 	// Initiate handlers
 	r := gin.New()
@@ -62,12 +70,14 @@ func Start() {
 	r.Use(middlewares.GzipDecode()) // Gzip
 	r.Use(middlewares.HashDecode()) // Hash
 
+	if *TrustedSubnet != `` {
+		r.Use(limit.CIDR(*TrustedSubnet))
+	}
+
 	// Check if ADDRESS environment variable is set and assign it to Host
 	if hostENV, exist := os.LookupEnv(`ADDRESS`); exist {
 		Host = &hostENV
 	}
-
-	flag.Parse()
 
 	// Create storage
 	//
