@@ -23,6 +23,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/Jourloy/go-metrics-collector/internal/agent/rpc"
+	"github.com/Jourloy/go-metrics-collector/internal/proto"
 	"github.com/avast/retry-go"
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
@@ -39,6 +41,7 @@ var (
 
 type Collector struct {
 	done chan struct{}
+	pr   proto.MetricServiceClient
 	sync.Mutex
 	gauge   map[string]float64
 	counter map[string]int64
@@ -116,10 +119,13 @@ func CreateCollector() *Collector {
 	// Parse environment variables
 	envParse()
 
+	pr := rpc.Connect()
+
 	return &Collector{
 		gauge:   make(map[string]float64),
 		counter: make(map[string]int64),
 		done:    make(chan struct{}),
+		pr:      pr,
 	}
 }
 
@@ -283,6 +289,24 @@ func (c *Collector) sendMetricWorker(id int, metric <-chan Metric) {
 
 		zap.L().Debug(`Metric worker finished`, zap.Int(`id`, id), zap.Int(`code`, code), zap.String(`id`, m.ID))
 	}
+
+	// GRPC
+
+	/* for m := range metric {
+		if m.MType == `gauge` {
+			c.pr.UpdateGauge(context.Background(), &proto.UpdateGaugeRequest{
+				Value: *m.Value,
+				Name: m.ID,
+			})
+		}
+
+		if m.MType == `counter` {
+			c.pr.UpdateCounter(context.Background(), &proto.UpdateCounterRequest{
+				Value: *m.Delta,
+				Name: m.ID,
+			})
+		}
+	} */
 }
 
 // sendPOST sends a POST request to the server with the given metric.

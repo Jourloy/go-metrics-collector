@@ -6,8 +6,10 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
@@ -17,9 +19,12 @@ import (
 	limit "github.com/bu/gin-access-limit"
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
+	"google.golang.org/grpc"
 
+	"github.com/Jourloy/go-metrics-collector/internal/proto"
 	"github.com/Jourloy/go-metrics-collector/internal/server/handlers"
 	"github.com/Jourloy/go-metrics-collector/internal/server/middlewares"
+	"github.com/Jourloy/go-metrics-collector/internal/server/rpc"
 	"github.com/Jourloy/go-metrics-collector/internal/server/storage"
 	"github.com/Jourloy/go-metrics-collector/internal/server/storage/repository"
 )
@@ -100,6 +105,8 @@ func Start() {
 	// Register application, collector, and value handlers
 	handlers.RegisterAppHandler(appGroup, s)
 
+	go startGRPC()
+
 	srv := &http.Server{
 		Addr:    *Host,
 		Handler: r,
@@ -123,4 +130,21 @@ func Start() {
 	<-ctx.Done()
 
 	log.Println("Server exiting")
+}
+
+func startGRPC() {
+	listen, err := net.Listen("tcp", ":3200")
+	if err != nil {
+		log.Fatal(err)
+	}
+	// создаём gRPC-сервер без зарегистрированной службы
+	s := grpc.NewServer()
+	// регистрируем сервис
+	proto.RegisterMetricServiceServer(s, &rpc.MetricServer{})
+
+	fmt.Println("Сервер gRPC начал работу")
+	// получаем запрос gRPC
+	if err := s.Serve(listen); err != nil {
+		log.Fatal(err)
+	}
 }
