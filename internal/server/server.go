@@ -6,26 +6,33 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
+	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 	"time"
 
+	limit "github.com/bu/gin-access-limit"
 	"github.com/gin-contrib/pprof"
 	"github.com/gin-gonic/gin"
+	"google.golang.org/grpc"
 
+	"github.com/Jourloy/go-metrics-collector/internal/proto"
 	"github.com/Jourloy/go-metrics-collector/internal/server/handlers"
 	"github.com/Jourloy/go-metrics-collector/internal/server/middlewares"
+	"github.com/Jourloy/go-metrics-collector/internal/server/rpc"
 	"github.com/Jourloy/go-metrics-collector/internal/server/storage"
 	"github.com/Jourloy/go-metrics-collector/internal/server/storage/repository"
 )
 
 var (
-	Host = flag.String(`a`, `localhost:8080`, `Host of the server`)
-	Key  = flag.String(`key`, ``, `Key for cipher`)
+	Host          = flag.String(`a`, `localhost:8080`, `Host of the server`)
+	Key           = flag.String(`key`, ``, `Key for cipher`)
+	TrustedSubnet = flag.String(`t`, ``, `CIDR`)
 )
 
 type ServerConfig struct {
@@ -35,6 +42,7 @@ type ServerConfig struct {
 	StoreFile     string `json:"store_file"`
 	DatabaseDSN   string `json:"database_dsn"`
 	CryptoKey     string `json:"crypto_key"`
+	TrustedSubnet string `json:"trusted_subnet"`
 }
 
 func readConfig() {
@@ -43,15 +51,20 @@ func readConfig() {
 
 		b, _ := io.ReadAll(file)
 		var config ServerConfig
-		json.Unmarshal(b, &config)
+		err := json.Unmarshal(b, &config)
+		if err != nil {
+			panic(err)
+		}
 
 		Host = &config.Address
+		TrustedSubnet = &config.TrustedSubnet
 	}
 }
 
 // Start initiates the application.
 func Start() {
 	readConfig()
+	flag.Parse()
 
 	// Initiate handlers
 	r := gin.New()
@@ -62,12 +75,14 @@ func Start() {
 	r.Use(middlewares.GzipDecode()) // Gzip
 	r.Use(middlewares.HashDecode()) // Hash
 
+	if *TrustedSubnet != `` {
+		r.Use(limit.CIDR(*TrustedSubnet))
+	}
+
 	// Check if ADDRESS environment variable is set and assign it to Host
 	if hostENV, exist := os.LookupEnv(`ADDRESS`); exist {
 		Host = &hostENV
 	}
-
-	flag.Parse()
 
 	// Create storage
 	//
@@ -89,6 +104,8 @@ func Start() {
 
 	// Register application, collector, and value handlers
 	handlers.RegisterAppHandler(appGroup, s)
+
+	go startGRPC()
 
 	srv := &http.Server{
 		Addr:    *Host,
@@ -113,4 +130,21 @@ func Start() {
 	<-ctx.Done()
 
 	log.Println("Server exiting")
+}
+
+func startGRPC() {
+	listen, err := net.Listen("tcp", ":3200")
+	if err != nil {
+		log.Fatal(err)
+	}
+	// создаём gRPC-сервер без зарегистрированной службы
+	s := grpc.NewServer()
+	// регистрируем сервис
+	proto.RegisterMetricServiceServer(s, &rpc.MetricServer{})
+
+	fmt.Println("Сервер gRPC начал работу")
+	// получаем запрос gRPC
+	if err := s.Serve(listen); err != nil {
+		log.Fatal(err)
+	}
 }

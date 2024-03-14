@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package app;
+
+option go_package = "app/proto";
+
+message Request {
+  string query = 1;
+  int32  page  = 2;
+  int32  limit = 3;
+}
+
+message UpdateGaugeRequest {
+	string name = 1;
+	double value = 2;
+}
+
+message UpdateCounterRequest {
+	string name = 1;
+	sint64 value = 2;
+}
+
+message UpdateResponse {
+  string error = 1;
+}
+
+service MetricService {
+  rpc UpdateGauge(UpdateGaugeRequest) returns (UpdateResponse);
+  rpc UpdateCounter(UpdateCounterRequest) returns (UpdateResponse);
+} 
